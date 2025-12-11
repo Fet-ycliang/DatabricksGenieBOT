@@ -42,6 +42,9 @@ class DefaultConfig:
     # Admin contact email - shown to users in the info command
     ADMIN_CONTACT_EMAIL = os.getenv("ADMIN_CONTACT_EMAIL", "admin@company.com")
     
+    # Timezone configuration for user-facing timestamps
+    TIMEZONE = os.getenv("TIMEZONE", "Asia/Taipei")
+    
     # Feedback settings
     ENABLE_FEEDBACK_CARDS = os.getenv("ENABLE_FEEDBACK_CARDS", "True").lower() == "true"
     ENABLE_GENIE_FEEDBACK_API = os.getenv("ENABLE_GENIE_FEEDBACK_API", "True").lower() == "true"
