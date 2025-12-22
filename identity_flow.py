@@ -32,7 +32,7 @@ async def handle_pending_email_input(
 
     if is_valid_email_func(question):
         user_session = await create_session_func(turn_context, question)
-        questions_text = "\n".join([f"- \"{q}\"" for q in sample_questions])
+        questions_text = "\n".join([f"- {q}" for q in sample_questions])
         await turn_context.send_activity(
             f"✅ **電子郵件已確認！**\n\n"
             f"歡迎，{user_session.name}！我已成功將您登入為 {user_session.email}。\n\n"
