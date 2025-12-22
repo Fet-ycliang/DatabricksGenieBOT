@@ -3,6 +3,10 @@
 # Licensed under the MIT License.
 
 import os
+from dotenv import load_dotenv
+
+# 載入 .env 檔案（僅用於本地測試）
+load_dotenv()
 
 """ Bot Configuration """
 

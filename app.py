@@ -16,9 +16,17 @@ Databricks Genie 機器人
 """
 
 """
-啟動指令：
-python3 -m aiohttp.web -H 0.0.0.0 -P 8000 app:init_func
+remote 啟動指令：
+python -m aiohttp.web -H 0.0.0.0 -P 8000 app:init_func
+DEBUG:asyncio:Using proactor: IocpProactor
+======== Running on http://0.0.0.0:8000 ========
+(Press CTRL+C to quit)
 
+local 啟動指令：
+python -m aiohttp.web -P 5168 app:init_func
+DEBUG:asyncio:Using proactor: IocpProactor
+======== Running on http://localhost:5168 ========
+(Press CTRL+C to quit)
 """
 
 from asyncio.log import logger
@@ -266,10 +274,8 @@ class MyBot(ActivityHandler):
         if user_session.conversation_id is None and user_session.user_id in self.user_sessions:
             # 這意味著對話因超時而重置
             await turn_context.send_activity(
-                "⏰ **對話已重置**\n\n"
-                "您之前的對話已過期（超過 4 小時無活動）。"
-                "正在使用新的對話上下文重新開始。\n\n"
-                "我現在正在處理您的回答！"
+                "⏰ **問題處理中**\n\n"
+                "我現在正在準備您的回答！"
             )
         
         # 使用使用者上下文處理訊息
