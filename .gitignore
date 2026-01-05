@@ -208,3 +208,4 @@ __marimo__/
 .vscode/
 typings/
 .azure/
+.env.example

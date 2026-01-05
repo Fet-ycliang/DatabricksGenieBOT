@@ -19,6 +19,9 @@ class UserSession:
         self.last_activity = datetime.now(timezone.utc)
         self.is_authenticated = True
         self.user_context: dict = {}
+        # 新增 AAD (Azure Active Directory) 相關資訊
+        self.aad_object_id: Optional[str] = None  # OpenID / AAD Object ID
+        self.upn: Optional[str] = None  # User Principal Name
 
     def update_activity(self) -> None:
         self.last_activity = datetime.now(timezone.utc)
@@ -32,6 +35,8 @@ class UserSession:
             "created_at": self.created_at.isoformat(),
             "last_activity": self.last_activity.isoformat(),
             "is_authenticated": self.is_authenticated,
+            "aad_object_id": self.aad_object_id,
+            "upn": self.upn,
         }
 
     def get_display_name(self) -> str:
