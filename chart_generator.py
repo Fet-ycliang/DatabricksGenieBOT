@@ -1,4 +1,4 @@
-"""Chart generation module for creating visual charts from data."""
+"""Chart generation module for creating visual charts from data - using Plotly."""
 
 import io
 import base64
@@ -6,20 +6,14 @@ from asyncio.log import logger
 from pathlib import Path
 import tempfile
 
-# 導入圖表生成庫 (Matplotlib + Seaborn)
-import matplotlib
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-# 設定中文字體支持
-matplotlib.rcParams['font.sans-serif'] = ['SimHei', 'DejaVu Sans', 'Arial']
-matplotlib.rcParams['axes.unicode_minus'] = False
+# 導入 Plotly（高品質圖表生成）
+import plotly.graph_objects as go
 
 
 def generate_chart_image(chart_info: dict) -> str:
-    """生成圖表圖片並返回 base64 編碼的字符串
+    """用 Plotly 生成高品質圖表並返回 base64 編碼的 PNG
     
-    使用 Matplotlib + Seaborn 生成高品質圖表
+    使用 Plotly 生成美化的圖表，通過 kaleido 轉換為 PNG
     
     Args:
         chart_info: 包含圖表信息的字典，包括:
@@ -31,141 +25,94 @@ def generate_chart_image(chart_info: dict) -> str:
     Returns:
         base64 編碼的 PNG 圖片字符串
     """
-    chart_type = chart_info['chart_type']
-    chart_data = chart_info['data_for_chart']
-    category_col = chart_info['category_column']
-    value_col = chart_info['value_column']
-    
-    # 提取數據
-    categories = [item['category'] for item in chart_data]
-    values = [item['value'] for item in chart_data]
-    
-    # 設定風格
-    sns.set_style("whitegrid")
-    sns.set_palette("husl")
-    
     try:
-        # 創建圖表
-        fig, ax = plt.subplots(figsize=(10, 6), dpi=100)
+        chart_type = chart_info['chart_type']
+        chart_data = chart_info['data_for_chart']
+        category_col = chart_info['category_column']
+        value_col = chart_info['value_column']
+        
+        # 提取數據
+        categories = [item['category'] for item in chart_data]
+        values = [item['value'] for item in chart_data]
+        
+        # 建立 Plotly 圖表
+        fig = None
         
         if chart_type == 'pie':
             # 圓餅圖
-            colors = sns.color_palette("husl", len(categories))
-            ax.pie(
-                values,
-                labels=categories,
-                autopct='%1.1f%%',
-                startangle=90,
-                colors=colors,
-                textprops={'fontsize': 11, 'color': '#333'}
-            )
-            ax.set_title(
-                f'{category_col} vs {value_col}',
-                fontsize=14,
-                fontweight='bold',
-                pad=20
-            )
-            
+            fig = go.Figure(data=[
+                go.Pie(
+                    labels=categories,
+                    values=values,
+                    marker=dict(line=dict(color='white', width=2)),
+                    textposition='auto',
+                    hoverinfo='label+value+percent'
+                )
+            ])
+        
         elif chart_type == 'line':
             # 折線圖
-            ax.plot(
-                categories,
-                values,
-                marker='o',
-                linewidth=2.5,
-                markersize=8,
-                color='#2E86AB',
-                markerfacecolor='white',
-                markeredgecolor='#2E86AB',
-                markeredgewidth=2
-            )
-            
-            # 添加數值標籤
-            for i, (cat, val) in enumerate(zip(categories, values)):
-                ax.text(i, val, f'{val:,.0f}', ha='center', va='bottom', fontsize=10)
-            
-            # 填充區域
-            ax.fill_between(
-                range(len(categories)),
-                values,
-                alpha=0.2,
-                color='#2E86AB'
-            )
-            
-            ax.set_xlabel(category_col, fontsize=12, fontweight='bold')
-            ax.set_ylabel(value_col, fontsize=12, fontweight='bold')
-            ax.set_title(
-                f'{category_col} vs {value_col}',
-                fontsize=14,
-                fontweight='bold',
-                pad=20
-            )
-            ax.grid(True, alpha=0.3)
-            ax.set_xticklabels(categories, rotation=45, ha='right')
-            
-        else:  # bar
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=categories,
+                y=values,
+                mode='lines+markers',
+                name=value_col,
+                line=dict(color='#2E86AB', width=3),
+                marker=dict(size=10, color='#2E86AB'),
+                fill='tozeroy',
+                fillcolor='rgba(46, 134, 171, 0.2)',
+                hovertemplate='<b>%{x}</b><br>' + value_col + ': %{y:,.0f}<extra></extra>'
+            ))
+        
+        else:  # bar（預設長條圖）
             # 長條圖
-            colors = sns.color_palette("husl", len(categories))
-            bars = ax.bar(categories, values, color=colors, edgecolor='black', linewidth=1)
-            
-            # 添加數值標籤
-            for bar in bars:
-                height = bar.get_height()
-                ax.text(
-                    bar.get_x() + bar.get_width()/2.,
-                    height,
-                    f'{height:,.0f}',
-                    ha='center',
-                    va='bottom',
-                    fontsize=10
-                )
-            
-            ax.set_xlabel(category_col, fontsize=12, fontweight='bold')
-            ax.set_ylabel(value_col, fontsize=12, fontweight='bold')
-            ax.set_title(
-                f'{category_col} vs {value_col}',
-                fontsize=14,
-                fontweight='bold',
-                pad=20
-            )
-            ax.grid(True, alpha=0.3, axis='y')
-            ax.set_xticklabels(categories, rotation=45, ha='right')
+            fig = go.Figure()
+            fig.add_trace(go.Bar(
+                x=categories,
+                y=values,
+                name=value_col,
+                marker=dict(
+                    color=values,
+                    colorscale='Viridis',
+                    line=dict(color='white', width=1)
+                ),
+                hovertemplate='<b>%{x}</b><br>' + value_col + ': %{y:,.0f}<extra></extra>'
+            ))
         
-        # 調整佈局
-        plt.tight_layout()
+        # 統一的布局設定
+        fig.update_layout(
+            title=dict(text=f'{category_col} vs {value_col}', font=dict(size=18, color='#333')),
+            xaxis_title=category_col if chart_type != 'pie' else None,
+            yaxis_title=value_col if chart_type != 'pie' else None,
+            hovermode='closest',
+            plot_bgcolor='rgba(240, 240, 240, 0.5)',
+            paper_bgcolor='white',
+            font=dict(family='Arial, sans-serif', size=12, color='#333'),
+            width=1000,
+            height=600,
+            margin=dict(l=80, r=80, t=100, b=80),
+            showlegend=chart_type != 'pie'
+        )
         
-        # 保存為 PNG 並轉換為 base64
-        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
-            tmp_path = tmp.name
+        if chart_type != 'pie':
+            fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='lightgray', zeroline=False)
+            fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='lightgray', zeroline=False)
         
-        fig.savefig(tmp_path, format='png', dpi=100, bbox_inches='tight')
-        plt.close(fig)
+        # 轉換為 PNG 並編碼為 base64
+        png_bytes = fig.to_image(format='png', width=1000, height=600)
+        image_base64 = base64.b64encode(png_bytes).decode('utf-8')
         
-        # 讀取圖片並編碼為 base64
-        with open(tmp_path, 'rb') as image_file:
-            image_bytes = image_file.read()
-            image_base64 = base64.b64encode(image_bytes).decode('utf-8')
-        
-        # 清理臨時文件
-        Path(tmp_path).unlink()
-        
+        logger.info(f"[圖表生成] 成功生成 {chart_type} 圖表，大小: {len(png_bytes)} bytes")
         return image_base64
         
     except Exception as e:
-        logger.error(f"生成 Matplotlib 圖表時發生錯誤: {e}")
-        plt.close('all')
+        logger.error(f"生成 Plotly 圖表時發生錯誤: {e}", exc_info=True)
         raise
 
 
 def create_chart_card_with_image(chart_info: dict) -> dict:
-    """創建包含實際圖表圖片的 Adaptive Card
-    
-    Args:
-        chart_info: 圖表信息字典
-    
-    Returns:
-        Adaptive Card JSON 結構
-    """
+    """創建包含 Plotly 高品質圖表的 Adaptive Card"""
     if not chart_info.get('suitable'):
         return None
     
@@ -174,42 +121,25 @@ def create_chart_card_with_image(chart_info: dict) -> dict:
     category_col = chart_info['category_column']
     value_col = chart_info['value_column']
     
-    # 圖表類型對應的中文名稱和圖示
-    chart_names = {
-        'bar': ('長條圖', '📊'),
-        'pie': ('圓餅圖', '🥧'),
-        'line': ('折線圖', '📈')
-    }
-    chart_name, chart_icon = chart_names.get(chart_type, ('圖表', '📊'))
+    chart_icons = {'bar': '���', 'pie': '���', 'line': '���'}
+    chart_icon = chart_icons.get(chart_type, '���')
     
-    # 生成圖表圖片
     try:
         image_base64 = generate_chart_image(chart_info)
         image_url = f"data:image/png;base64,{image_base64}"
     except Exception as e:
         logger.error(f"生成圖表圖片時發生錯誤: {e}")
-        # 如果生成失敗，返回錯誤訊息卡片
         return {
             "type": "AdaptiveCard",
             "version": "1.5",
             "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
             "body": [
-                {
-                    "type": "TextBlock",
-                    "text": "⚠️ 圖表生成失敗",
-                    "weight": "Bolder",
-                    "color": "Warning"
-                },
-                {
-                    "type": "TextBlock",
-                    "text": f"錯誤訊息: {str(e)}",
-                    "wrap": True,
-                    "isSubtle": True
-                }
+                {"type": "TextBlock", "text": "⚠️ 圖表生成失敗", "weight": "Bolder", "color": "Warning"},
+                {"type": "TextBlock", "text": f"錯誤訊息: {str(e)[:100]}", "wrap": True, "isSubtle": True}
             ]
         }
     
-    card = {
+    return {
         "type": "AdaptiveCard",
         "version": "1.5",
         "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
@@ -217,93 +147,42 @@ def create_chart_card_with_image(chart_info: dict) -> dict:
             {
                 "type": "Container",
                 "style": "emphasis",
-                "items": [
-                    {
-                        "type": "ColumnSet",
-                        "columns": [
-                            {
-                                "type": "Column",
-                                "width": "auto",
-                                "items": [
-                                    {
-                                        "type": "TextBlock",
-                                        "text": chart_icon,
-                                        "size": "Large"
-                                    }
-                                ]
-                            },
-                            {
-                                "type": "Column",
-                                "width": "stretch",
-                                "items": [
-                                    {
-                                        "type": "TextBlock",
-                                        "text": f"數據視覺化 - {chart_name}",
-                                        "weight": "Bolder",
-                                        "size": "Medium",
-                                        "color": "Accent"
-                                    },
-                                    {
-                                        "type": "TextBlock",
-                                        "text": f"{category_col} vs {value_col}",
-                                        "isSubtle": True,
-                                        "spacing": "None"
-                                    }
-                                ]
-                            }
-                        ]
-                    }
-                ]
+                "items": [{
+                    "type": "ColumnSet",
+                    "columns": [
+                        {"type": "Column", "width": "auto", "items": [{"type": "TextBlock", "text": chart_icon, "size": "Large"}]},
+                        {
+                            "type": "Column",
+                            "width": "stretch",
+                            "items": [
+                                {"type": "TextBlock", "text": "��� 數據視覺化", "weight": "Bolder", "size": "Medium", "color": "Accent"},
+                                {"type": "TextBlock", "text": f"{category_col} vs {value_col}", "isSubtle": True, "spacing": "None"}
+                            ]
+                        }
+                    ]
+                }]
             },
-            {
-                "type": "Image",
-                "url": image_url,
-                "size": "Stretch",
-                "spacing": "Medium"
-            },
-            {
-                "type": "TextBlock",
-                "text": f"📊 共 {len(chart_data)} 筆數據 | {chart_name}",
-                "wrap": True,
-                "isSubtle": True,
-                "size": "Small",
-                "horizontalAlignment": "Center",
-                "spacing": "Small"
-            }
+            {"type": "Image", "url": image_url, "size": "Stretch", "spacing": "Medium"},
+            {"type": "TextBlock", "text": f"✨ 共 {len(chart_data)} 筆數據 | Plotly 生成", "wrap": True, "isSubtle": True, "size": "Small", "horizontalAlignment": "Center", "spacing": "Small"}
         ]
     }
-    
-    return card
 
 
 def create_suggested_questions_card(suggested_questions: list) -> dict:
-    """創建包含建議問題的 Adaptive Card
-    
-    用户可以點擊按鈕來選擇建議問題進行查詢
-    
-    Args:
-        suggested_questions: 建議問題列表
-    
-    Returns:
-        Adaptive Card JSON 結構，包含可點擊的建議問題按鈕
-    """
+    """創建包含建議問題的 Adaptive Card"""
     if not suggested_questions or len(suggested_questions) == 0:
         return None
     
-    # 構建按鈕（最多 3 個）
     actions = [
         {
             "type": "Action.Submit",
             "title": f"❓ {question[:35]}{'...' if len(question) > 35 else ''}",
-            "data": {
-                "action": "ask_suggested_question",
-                "question": question
-            }
+            "data": {"action": "ask_suggested_question", "question": question}
         }
         for question in suggested_questions[:3]
     ]
     
-    card = {
+    return {
         "type": "AdaptiveCard",
         "version": "1.5",
         "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
@@ -311,47 +190,21 @@ def create_suggested_questions_card(suggested_questions: list) -> dict:
             {
                 "type": "Container",
                 "style": "emphasis",
-                "items": [
-                    {
-                        "type": "ColumnSet",
-                        "columns": [
-                            {
-                                "type": "Column",
-                                "width": "auto",
-                                "items": [
-                                    {
-                                        "type": "TextBlock",
-                                        "text": "💡",
-                                        "size": "Large"
-                                    }
-                                ]
-                            },
-                            {
-                                "type": "Column",
-                                "width": "stretch",
-                                "items": [
-                                    {
-                                        "type": "TextBlock",
-                                        "text": "建議問題",
-                                        "weight": "Bolder",
-                                        "size": "Medium",
-                                        "color": "Accent"
-                                    },
-                                    {
-                                        "type": "TextBlock",
-                                        "text": "點擊下方按鈕繼續詢問",
-                                        "isSubtle": True,
-                                        "spacing": "None",
-                                        "size": "Small"
-                                    }
-                                ]
-                            }
-                        ]
-                    }
-                ]
+                "items": [{
+                    "type": "ColumnSet",
+                    "columns": [
+                        {"type": "Column", "width": "auto", "items": [{"type": "TextBlock", "text": "���", "size": "Large"}]},
+                        {
+                            "type": "Column",
+                            "width": "stretch",
+                            "items": [
+                                {"type": "TextBlock", "text": "建議問題", "weight": "Bolder", "size": "Medium", "color": "Accent"},
+                                {"type": "TextBlock", "text": "點擊下方按鈕繼續詢問", "isSubtle": True, "spacing": "None", "size": "Small"}
+                            ]
+                        }
+                    ]
+                }]
             }
         ],
         "actions": actions
     }
-    
-    return card
