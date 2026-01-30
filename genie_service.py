@@ -127,6 +127,40 @@ class GenieService:
             await self._http_session.close()
             logger.info("🔌 已關閉 HTTP Session")
 
+    def _format_json_for_logging(self, data: Any, indent: int = 2) -> str:
+        """將 Python 物件格式化為漂亮的 JSON 字符串
+        
+        Args:
+            data: 要格式化的數據
+            indent: 縮進級別
+        
+        Returns:
+            格式化的 JSON 字符串
+        """
+        try:
+            return json.dumps(data, ensure_ascii=False, indent=indent, default=str)
+        except Exception as e:
+            logger.warning(f"無法序列化數據為 JSON: {e}")
+            return str(data)
+
+    def _log_api_response(self, request_id: str, response_data: Dict, total_elapsed: float) -> None:
+        """打印完整格式化的 API 響應
+        
+        Args:
+            request_id: 請求 ID
+            response_data: API 響應數據
+            total_elapsed: 總耗時（秒）
+        """
+        logger.info(
+            f"\n{'='*80}\n"
+            f"[{request_id}] 📤 API 響應 - 完整輸出\n"
+            f"{'-'*80}\n"
+            f"耗時: {total_elapsed:.2f}s\n"
+            f"{'-'*80}\n"
+            f"{self._format_json_for_logging(response_data)}\n"
+            f"{'='*80}"
+        )
+
     def _log_message_attachments(self, request_id: str, message: Any) -> None:
         """記錄訊息附件中的重要物件"""
         if not message.attachments:
@@ -418,15 +452,16 @@ class GenieService:
                 else:
                     logger.info(f"[{request_id}] ⏭️ 跳過提取 suggested_questions (狀態: {message_status}，不是 COMPLETED)")
                 
+                # 構建響應 JSON
+                response_data = {
+                    "columns": results.manifest.schema.as_dict(),
+                    "data": results.result.as_dict(),
+                    "query_description": query_description,
+                    "suggested_questions": suggested_questions,
+                }
+                
                 result = (
-                    json.dumps(
-                        {
-                            "columns": results.manifest.schema.as_dict(),
-                            "data": results.result.as_dict(),
-                            "query_description": query_description,
-                            "suggested_questions": suggested_questions,
-                        }
-                    ),
+                    json.dumps(response_data),
                     conversation_id,
                     initial_message.message_id,
                 )
@@ -439,6 +474,9 @@ class GenieService:
                     f"  欄位數:       {col_count}\n"
                     f"  說明:         {query_description[:60]}{'...' if len(query_description) > 60 else ''}"
                 )
+                
+                # 打印完整的 API 響應
+                self._log_api_response(request_id, response_data, total_elapsed)
                 
                 success = True
                 self.metrics.record_query(total_elapsed, success=True)
@@ -459,11 +497,13 @@ class GenieService:
                                     suggested_questions = list(att.suggested_questions.questions)
                                     break
                         
+                        response_data = {
+                            "message": attachment.text.content,
+                            "suggested_questions": suggested_questions,
+                        }
+                        
                         result = (
-                            json.dumps({
-                                "message": attachment.text.content,
-                                "suggested_questions": suggested_questions,
-                            }),
+                            json.dumps(response_data),
                             conversation_id,
                             initial_message.message_id,
                         )
@@ -474,6 +514,9 @@ class GenieService:
                             f"  總耗時:       {total_elapsed:.2f}s\n"
                             f"  訊息長度:     {len(attachment.text.content)}"
                         )
+                        
+                        # 打印完整的 API 響應
+                        self._log_api_response(request_id, response_data, total_elapsed)
                         
                         success = True
                         self.metrics.record_query(total_elapsed, success=True)
@@ -493,11 +536,13 @@ class GenieService:
                             suggested_questions = list(att.suggested_questions.questions)
                             break
             
+            response_data = {
+                "message": message_content.content,
+                "suggested_questions": suggested_questions,
+            }
+            
             result = (
-                json.dumps({
-                    "message": message_content.content,
-                    "suggested_questions": suggested_questions,
-                }),
+                json.dumps(response_data),
                 conversation_id,
                 initial_message.message_id,
             )
@@ -508,6 +553,9 @@ class GenieService:
                 f"  總耗時:       {total_elapsed:.2f}s\n"
                 f"  訊息長度:     {len(message_content.content)}"
             )
+            
+            # 打印完整的 API 響應
+            self._log_api_response(request_id, response_data, total_elapsed)
             
             success = True
             self.metrics.record_query(total_elapsed, success=True)
