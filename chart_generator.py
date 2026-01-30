@@ -48,35 +48,43 @@ def generate_chart_image(chart_info: dict) -> str:
         
         # 根據圖表類型繪製
         if chart_type == 'pie':
-            # 圓餅圖
-            colors = sns.color_palette("husl", len(categories))
-            plt.pie(values, labels=categories, autopct='%1.1f%%', colors=colors, startangle=90)
+            # 圓餅圖 - 專業配色
+            colors = sns.color_palette("Set2", len(categories))
+            plt.pie(values, labels=categories, autopct='%1.1f%%', colors=colors, startangle=90, 
+                    textprops={'fontsize': 11, 'fontweight': 'bold'}, wedgeprops={'edgecolor': 'white', 'linewidth': 2})
             plt.title(f'{category_col} vs {value_col}', fontsize=16, fontweight='bold', pad=20)
         
         elif chart_type == 'line':
-            # 折線圖
-            plt.plot(categories, values, marker='o', linewidth=2.5, markersize=8, color='#2E86AB')
-            plt.fill_between(range(len(categories)), values, alpha=0.3, color='#2E86AB')
+            # 折線圖 - 專業藍色
+            plt.plot(categories, values, marker='o', linewidth=3, markersize=10, color='#1f77b4', markerfacecolor='#1f77b4', markeredgecolor='white', markeredgewidth=2)
+            plt.fill_between(range(len(categories)), values, alpha=0.25, color='#1f77b4')
             # 在數據點上標上數值
             for i, (cat, val) in enumerate(zip(categories, values)):
-                plt.text(i, val, f'{val:,.0f}', ha='center', va='bottom', fontsize=10, fontweight='bold')
-            plt.xlabel(category_col, fontsize=12, fontweight='bold')
-            plt.ylabel(value_col, fontsize=12, fontweight='bold')
+                plt.text(i, val, f'{val:,.0f}', ha='center', va='bottom', fontsize=20, fontweight='bold', color='#1f77b4')
+            plt.xlabel(category_col, fontsize=24, fontweight='bold', color='#333333')
+            plt.ylabel(value_col, fontsize=24, fontweight='bold', color='#333333')
             plt.title(f'{category_col} vs {value_col}', fontsize=16, fontweight='bold', pad=20)
-            plt.xticks(rotation=45, ha='right')
-            plt.grid(True, alpha=0.3)
+            plt.xticks(rotation=45, ha='right', fontsize=14, color='#555555')
+            plt.yticks(fontsize=14, color='#555555')
+            plt.grid(True, alpha=0.2, linestyle='--', color='#cccccc')
         
         else:  # bar（預設長條圖）
-            # 長條圖
-            colors = sns.color_palette("viridis", len(categories))
-            ax = sns.barplot(x=categories, y=values, palette=colors, width=0.7)
+            # 長條圖 - 專業漸層配色
+            colors = sns.color_palette("husl", len(categories))
+            ax = sns.barplot(x=categories, y=values, palette=colors, width=0.65, edgecolor='white', linewidth=1.5)
             # 在柱狀圖頂部標上數值
             for i, (cat, val) in enumerate(zip(categories, values)):
-                ax.text(i, val, f'{val:,.0f}', ha='center', va='bottom', fontsize=10, fontweight='bold')
-            plt.xlabel(category_col, fontsize=12, fontweight='bold')
-            plt.ylabel(value_col, fontsize=12, fontweight='bold')
+                ax.text(i, val, f'{val:,.0f}', ha='center', va='bottom', fontsize=20, fontweight='bold', color='#333333')
+            plt.xlabel(category_col, fontsize=24, fontweight='bold', color='#333333')
+            plt.ylabel(value_col, fontsize=24, fontweight='bold', color='#333333')
             plt.title(f'{category_col} vs {value_col}', fontsize=16, fontweight='bold', pad=20)
-            plt.xticks(rotation=45, ha='right')
+            plt.xticks(rotation=45, ha='right', fontsize=14, color='#555555')
+            plt.yticks(fontsize=14, color='#555555')
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            ax.spines['left'].set_color('#cccccc')
+            ax.spines['bottom'].set_color('#cccccc')
+            plt.yticks(fontsize=14)
         
         # 調整布局
         plt.tight_layout()
