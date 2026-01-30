@@ -400,13 +400,23 @@ class GenieService:
                     f"  說明:         {query_description[:80] if query_description else 'N/A'}{'...' if len(query_description) > 80 else ''}"
                 )
                 
-                # 提取 suggested_questions
+                # 提取 suggested_questions（只有當 status 為 COMPLETED 時）
                 suggested_questions = []
-                for attachment in message_content.attachments:
-                    if hasattr(attachment, 'suggested_questions') and attachment.suggested_questions:
-                        if hasattr(attachment.suggested_questions, 'questions') and attachment.suggested_questions.questions:
-                            suggested_questions = list(attachment.suggested_questions.questions)
-                            break
+                message_status = message_content.status if message_content else None
+                logger.info(f"[{request_id}] 📌 訊息狀態: {message_status}")
+                
+                if message_status == "COMPLETED" and message_content and message_content.attachments:
+                    logger.info(f"[{request_id}] 🔍 開始提取 suggested_questions...")
+                    for attachment in message_content.attachments:
+                        if hasattr(attachment, 'suggested_questions') and attachment.suggested_questions:
+                            if hasattr(attachment.suggested_questions, 'questions') and attachment.suggested_questions.questions:
+                                suggested_questions = list(attachment.suggested_questions.questions)
+                                logger.info(f"[{request_id}] ✅ 成功提取 {len(suggested_questions)} 個建議問題")
+                                break
+                    if not suggested_questions:
+                        logger.info(f"[{request_id}] ℹ️ 訊息已完成但未找到建議問題")
+                else:
+                    logger.info(f"[{request_id}] ⏭️ 跳過提取 suggested_questions (狀態: {message_status}，不是 COMPLETED)")
                 
                 result = (
                     json.dumps(
