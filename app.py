@@ -71,7 +71,6 @@ from identity_flow import handle_pending_email_input, handle_user_identification
 from command_handler import handle_special_commands
 from feedback_cards import create_error_card, create_thank_you_card, send_feedback_card
 from welcome_messages import build_authenticated_welcome, build_unauthenticated_welcome
-from graph_service import GraphService, get_teams_user_info
 from chart_generator import create_chart_card_with_image, create_suggested_questions_card
 
 
@@ -126,19 +125,10 @@ ADAPTER.on_turn_error = on_error
 
 GENIE_SERVICE = GenieService(CONFIG)
 
-# 初始化 Graph Service（如果啟用）
-GRAPH_SERVICE = None
-if CONFIG.ENABLE_GRAPH_API_AUTO_LOGIN and CONFIG.OAUTH_CONNECTION_NAME:
-    GRAPH_SERVICE = GraphService(CONFIG.OAUTH_CONNECTION_NAME)
-    logger.info(f"Graph API 自動登入已啟用，使用連線: {CONFIG.OAUTH_CONNECTION_NAME}")
-else:
-    logger.info("Graph API 自動登入已停用，將使用手動 email 輸入")
-
 
 class MyBot(ActivityHandler):
-    def __init__(self, genie_service: GenieService, graph_service: Optional[GraphService] = None):
+    def __init__(self, genie_service: GenieService):
         self.genie_service = genie_service
-        self.graph_service = graph_service
         self.user_sessions: Dict[str, UserSession] = {}  # 將 Teams 使用者 ID 映射到 UserSession
         self.email_sessions: Dict[str, UserSession] = {}  # 將電子郵件映射到 UserSession 以便於查找
         self.message_feedback: Dict[str, Dict] = {}  # 追蹤每條訊息的回饋
@@ -167,29 +157,7 @@ class MyBot(ActivityHandler):
                 session.update_activity()
                 return session
         
-        # 如果啟用 Graph API，嘗試自動取得使用者資訊
-        if self.graph_service:
-            try:
-                user_info = await self.graph_service.get_user_email_and_id(turn_context)
-                if user_info and user_info.get('email'):
-                    email = user_info['email']
-                    name = user_info.get('name') or email.split('@')[0]
-                    aad_object_id = user_info.get('id')
-                    
-                    # 建立新的使用者工作階段
-                    session = UserSession(user_id, email, name)
-                    session.aad_object_id = aad_object_id  # 儲存 OpenID
-                    session.upn = user_info.get('upn')
-                    
-                    self.user_sessions[user_id] = session
-                    self.email_sessions[email] = session
-                    
-                    logger.info(f"透過 Graph API 自動建立使用者工作階段: {session.get_display_name()}, AAD ID: {aad_object_id}")
-                    return session
-            except Exception as e:
-                logger.warning(f"無法透過 Graph API 取得使用者資訊: {str(e)}")
-        
-        # 如果 Graph API 未啟用或失敗，嘗試從 Teams channel data 取得基本資訊
+        # 嘗試從 Teams channel data 取得基本資訊
         try:
             teams_info = await get_teams_user_info(turn_context)
             if teams_info.get('email'):
@@ -359,7 +327,6 @@ class MyBot(ActivityHandler):
             format_local_timestamp,
             self.user_sessions,
             self.email_sessions,
-            self.graph_service,
         ):
             return
         
@@ -609,40 +576,9 @@ class MyBot(ActivityHandler):
                     welcome_message = build_unauthenticated_welcome(is_emulator, CONFIG)
 
                 await turn_context.send_activity(welcome_message)
-                
-                # 🎫 如果 Graph API 已啟用且成功取得使用者資訊，顯示用戶資料卡片
-                if user_session and self.graph_service and CONFIG.ENABLE_GRAPH_API_AUTO_LOGIN:
-                    try:
-                        user_info = await self.graph_service.get_user_email_and_id(turn_context)
-                        if user_info and user_info.get('email'):
-                            # 取得完整的使用者資料（如果可用）
-                            token_response = await self.graph_service.get_user_token(turn_context)
-                            if token_response:
-                                full_profile = await self.graph_service.get_user_profile(token_response.token)
-                                user_info.update(full_profile)
-                            
-                            # 創建並發送使用者資料卡片
-                            from graph_service import GraphService
-                            user_card = GraphService.create_user_profile_card(user_info)
-                            
-                            from botbuilder.schema import Attachment
-                            card_attachment = Attachment(
-                                content_type="application/vnd.microsoft.card.adaptive",
-                                content=user_card
-                            )
-                            
-                            card_activity = Activity(
-                                type="message",
-                                attachments=[card_attachment]
-                            )
-                            
-                            await turn_context.send_activity(card_activity)
-                            logger.info(f"✅ 已發送使用者資料卡片給 {user_session.get_display_name()}")
-                    except Exception as e:
-                        logger.warning(f"⚠️ 無法發送使用者資料卡片: {str(e)}")
 
 
-BOT = MyBot(GENIE_SERVICE, GRAPH_SERVICE)
+BOT = MyBot(GENIE_SERVICE)
 
 
 async def health_check(req: Request) -> Response:
@@ -660,8 +596,7 @@ async def health_check(req: Request) -> Response:
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "checks": {
                 "app": "running",
-                "databricks": "not_checked",
-                "graph_api": "not_checked"
+                "databricks": "not_checked"
             }
         }
         
@@ -675,15 +610,6 @@ async def health_check(req: Request) -> Response:
             logger.warning(f"Databricks health check failed: {str(e)}")
             health_status["checks"]["databricks"] = "error"
         
-        # 檢查 Graph API 連接
-        try:
-            if GRAPH_SERVICE and hasattr(GRAPH_SERVICE, 'client_id'):
-                health_status["checks"]["graph_api"] = "configured"
-            else:
-                health_status["checks"]["graph_api"] = "not_configured"
-        except Exception as e:
-            logger.warning(f"Graph API health check failed: {str(e)}")
-            health_status["checks"]["graph_api"] = "error"
         
         return json_response(data=health_status, status=200)
         
