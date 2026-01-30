@@ -398,6 +398,11 @@ class MyBot(ActivityHandler):
             answer_json = json.loads(answer)
             response = process_query_results(answer_json)
             
+            # 調試日誌：輸出 answer_json 的內容
+            logger.info(f"[DEBUG] answer_json 鍵值: {list(answer_json.keys())}")
+            logger.info(f"[DEBUG] suggested_questions: {answer_json.get('suggested_questions', 'NOT FOUND')}")
+            logger.info(f"[DEBUG] chart_info: {answer_json.get('chart_info', 'NOT FOUND')}")
+            
             # 將使用者上下文添加到回應中
             response = f"**👤 {user_session.name}**\n\n{response}"
 
@@ -405,7 +410,8 @@ class MyBot(ActivityHandler):
             await turn_context.send_activity(response)
             
             # 如果有圖表信息，發送圖表卡片
-            if 'chart_info' in answer_json and answer_json['chart_info'].get('suitable'):
+            if 'chart_info' in answer_json and answer_json['chart_info'] and answer_json['chart_info'].get('suitable'):
+                logger.info("📊 發送圖表卡片")
                 chart_card = create_chart_card_with_image(answer_json['chart_info'])
                 if chart_card:
                     from botbuilder.schema import Attachment
@@ -418,10 +424,14 @@ class MyBot(ActivityHandler):
                         attachments=[chart_attachment]
                     )
                     await turn_context.send_activity(chart_message)
+            else:
+                logger.info("ℹ️ 沒有適合的圖表（chart_info 不存在或 suitable=False）")
             
-            # 如果有建議問題，發送建議問題卡片
-            if 'suggested_questions' in answer_json and answer_json['suggested_questions']:
-                suggested_card = create_suggested_questions_card(answer_json['suggested_questions'])
+            # 如果有建議問題，發送建議問題卡片（獨立於圖表）
+            suggested_questions = answer_json.get('suggested_questions', [])
+            if suggested_questions and len(suggested_questions) > 0:
+                logger.info(f"💡 發送建議問題卡片，共 {len(suggested_questions)} 個問題")
+                suggested_card = create_suggested_questions_card(suggested_questions)
                 if suggested_card:
                     from botbuilder.schema import Attachment
                     suggested_attachment = Attachment(
@@ -433,6 +443,8 @@ class MyBot(ActivityHandler):
                         attachments=[suggested_attachment]
                     )
                     await turn_context.send_activity(suggested_message)
+            else:
+                logger.info(f"ℹ️ 沒有建議問題或為空: {suggested_questions}")
             
             # 作為單獨的訊息發送回饋卡
             await send_feedback_card(turn_context, user_session, CONFIG.ENABLE_FEEDBACK_CARDS)
