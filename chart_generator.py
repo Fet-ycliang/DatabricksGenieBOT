@@ -60,7 +60,7 @@ def generate_chart_image(chart_info: dict) -> str:
             plt.fill_between(range(len(categories)), values, alpha=0.25, color='#1f77b4')
             # 在數據點上標上數值
             for i, (cat, val) in enumerate(zip(categories, values)):
-                plt.text(i, val, f'{val:,.0f}', ha='center', va='bottom', fontsize=20, fontweight='bold', color='#1f77b4')
+                plt.text(i, val, f'{val:,.0f}', ha='center', va='bottom', fontsize=16, fontweight='bold', color='#1f77b4')
             plt.xlabel(category_col, fontsize=24, fontweight='bold', color='#333333')
             plt.ylabel(value_col, fontsize=24, fontweight='bold', color='#333333')
             plt.title(f'{category_col} vs {value_col}', fontsize=16, fontweight='bold', pad=20)
@@ -74,7 +74,7 @@ def generate_chart_image(chart_info: dict) -> str:
             ax = sns.barplot(x=categories, y=values, palette=colors, width=0.65, edgecolor='white', linewidth=1.5)
             # 在柱狀圖頂部標上數值
             for i, (cat, val) in enumerate(zip(categories, values)):
-                ax.text(i, val, f'{val:,.0f}', ha='center', va='bottom', fontsize=20, fontweight='bold', color='#333333')
+                ax.text(i, val, f'{val:,.0f}', ha='center', va='bottom', fontsize=16, fontweight='bold', color='#333333')
             plt.xlabel(category_col, fontsize=24, fontweight='bold', color='#333333')
             plt.ylabel(value_col, fontsize=24, fontweight='bold', color='#333333')
             plt.title(f'{category_col} vs {value_col}', fontsize=16, fontweight='bold', pad=20)
@@ -84,7 +84,6 @@ def generate_chart_image(chart_info: dict) -> str:
             ax.spines['right'].set_visible(False)
             ax.spines['left'].set_color('#cccccc')
             ax.spines['bottom'].set_color('#cccccc')
-            plt.yticks(fontsize=14)
         
         # 調整布局
         plt.tight_layout()
