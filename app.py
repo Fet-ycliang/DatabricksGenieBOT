@@ -159,11 +159,29 @@ class MyBot(ActivityHandler):
         
         # 嘗試從 Teams channel data 取得基本資訊
         try:
-            teams_info = await get_teams_user_info(turn_context)
-            if teams_info.get('email'):
-                email = teams_info['email']
-                name = teams_info.get('name') or email.split('@')[0]
-                aad_object_id = teams_info.get('aad_object_id')
+            channel_data = turn_context.activity.channel_data or {}
+            from_property = turn_context.activity.from_property
+            
+            # 從 channelData 或 from_property 取得電子郵件
+            email = None
+            name = None
+            aad_object_id = None
+            
+            # 優先從 channelData 取得
+            if isinstance(channel_data, dict):
+                user_data = channel_data.get('user', {})
+                email = user_data.get('userPrincipalName') or user_data.get('mail')
+                name = user_data.get('displayName')
+                aad_object_id = user_data.get('id')
+            
+            # 備用：從 from_property 取得
+            if not email and hasattr(from_property, 'aad_object_id'):
+                email = getattr(from_property, 'email', None)
+                name = getattr(from_property, 'name', None)
+                aad_object_id = getattr(from_property, 'aad_object_id', None)
+            
+            if email:
+                name = name or email.split('@')[0]
                 
                 session = UserSession(user_id, email, name)
                 session.aad_object_id = aad_object_id
