@@ -80,6 +80,9 @@ class GenieService:
         self._http_session = None
         # 性能指標收集器
         self.metrics = QueryMetrics()
+        # ✅ 日誌採樣 - 每 60 秒或 1% 隨機採樣記錄一次統計
+        self.last_stats_log_time = time.time()
+        self.stats_log_interval = 60
 
     def _create_workspace_client(self) -> WorkspaceClient:
         logger.info(
@@ -87,10 +90,9 @@ class GenieService:
             "🔧 正在載入 Databricks 配置\n"
             "-"*80
         )
-        logger.info("  HOST:         %s", self._config.DATABRICKS_HOST)
-        logger.info("  TOKEN 存在:   %s", bool(self._config.DATABRICKS_TOKEN))
-        token_length = len(self._config.DATABRICKS_TOKEN) if self._config.DATABRICKS_TOKEN else 0
-        logger.info("  TOKEN 長度:   %s", token_length)
+        # ✅ 隱藏敏感信息：不記錄 HOST、TOKEN 長度等
+        logger.info("  認證狀態:     %s", "已配置" if self._config.DATABRICKS_TOKEN else "未配置")
+        logger.info("  Workspace:    %s", "已連接" if self._config.DATABRICKS_HOST else "未配置")
         logger.info("="*80)
 
         if not self._config.DATABRICKS_TOKEN:
@@ -107,15 +109,47 @@ class GenieService:
             logger.error("❌ 初始化 Databricks 客戶端失敗: %s", exc)
             raise
 
+    def should_log_stats(self) -> bool:
+        """✅ 決定是否記錄統計信息（時間 + 隨機採樣）"""
+        import random
+        current_time = time.time()
+        
+        # 方案 1: 時間條件 - 每 60 秒記錄一次
+        if current_time - self.last_stats_log_time >= self.stats_log_interval:
+            self.last_stats_log_time = current_time
+            return True
+        
+        # 方案 2: 隨機條件 - 1% 採樣率
+        if random.random() < 0.01:
+            return True
+        
+        return False
+
     @asynccontextmanager
     async def get_http_session(self):
-        """重用 HTTP Session 減少連接開銷"""
+        """重用 HTTP Session 減少連接開銷，配置超時防止掛起"""
         if self._http_session is None or self._http_session.closed:
-            connector = aiohttp.TCPConnector(limit=100, limit_per_host=30)
-            timeout = aiohttp.ClientTimeout(total=60)
-            self._http_session = aiohttp.ClientSession(
-                connector=connector, timeout=timeout
+            connector = aiohttp.TCPConnector(
+                limit=100,           # 連接池大小
+                limit_per_host=30,   # 每個主機的連接限制
+                ttl_dns_cache=300    # DNS 快取 5 分鐘
             )
+            # 配置分層超時：連接 5s, 讀取 10s, 總耗時 30s
+            timeout = aiohttp.ClientTimeout(
+                total=30,      # 整個請求的總超時時間
+                connect=5,     # 連接建立超時
+                sock_read=10,  # Socket 讀取超時
+                sock_connect=5 # Socket 連接超時
+            )
+            self._http_session = aiohttp.ClientSession(
+                connector=connector,
+                timeout=timeout,
+                headers={
+                    "User-Agent": "DatabricksGenieBOT/1.0",
+                    "Accept-Encoding": "gzip, deflate"
+                }
+            )
+            logger.info("✅ HTTP Session 已建立，超時配置：總 30s, 連接 5s, 讀取 10s")
         try:
             yield self._http_session
         finally:
@@ -123,9 +157,14 @@ class GenieService:
 
     async def close(self):
         """關閉 HTTP Session（應用程式關閉時調用）"""
-        if self._http_session and not self._http_session.closed:
-            await self._http_session.close()
-            logger.info("🔌 已關閉 HTTP Session")
+        try:
+            if self._http_session and not self._http_session.closed:
+                await self._http_session.close()
+                logger.info("🔌 已關閉 HTTP Session")
+        except Exception as e:
+            logger.error(f"關閉 HTTP Session 時發生錯誤: {e}")
+        finally:
+            self._http_session = None
 
     def _format_json_for_logging(self, data: Any, indent: int = 2) -> str:
         """將 Python 物件格式化為漂亮的 JSON 字符串
@@ -476,13 +515,14 @@ class GenieService:
                     f"  說明:         {query_description[:60]}{'...' if len(query_description) > 60 else ''}"
                 )
                 
-                # 打印完整的 API 響應
-                self._log_api_response(request_id, response_data, total_elapsed)
+                # 使用採樣邏輯記錄 API 響應
+                if self.should_log_stats():
+                    self._log_api_response(request_id, response_data, total_elapsed)
                 
                 success = True
                 self.metrics.record_query(total_elapsed, success=True)
                 
-                if self.metrics.total_queries % 100 == 0:
+                if self.should_log_stats():
                     self.metrics.log_stats()
                 
                 return result
@@ -516,13 +556,13 @@ class GenieService:
                             f"  訊息長度:     {len(attachment.text.content)}"
                         )
                         
-                        # 打印完整的 API 響應
-                        self._log_api_response(request_id, response_data, total_elapsed)
+                        # 使用採樣邏輯記錄 API 響應
+                        if self.should_log_stats():
+                            self._log_api_response(request_id, response_data, total_elapsed)
                         
-                        success = True
                         self.metrics.record_query(total_elapsed, success=True)
                         
-                        if self.metrics.total_queries % 100 == 0:
+                        if self.should_log_stats():
                             self.metrics.log_stats()
                         
                         return result
@@ -555,13 +595,13 @@ class GenieService:
                 f"  訊息長度:     {len(message_content.content)}"
             )
             
-            # 打印完整的 API 響應
-            self._log_api_response(request_id, response_data, total_elapsed)
+            # 使用採樣邏輯記錄 API 響應
+            if self.should_log_stats():
+                self._log_api_response(request_id, response_data, total_elapsed)
             
-            success = True
             self.metrics.record_query(total_elapsed, success=True)
             
-            if self.metrics.total_queries % 100 == 0:
+            if self.should_log_stats():
                 self.metrics.log_stats()
             
             return result
@@ -571,7 +611,7 @@ class GenieService:
             if not success:
                 self.metrics.record_query(total_elapsed, success=False)
             
-            if self.metrics.total_queries % 100 == 0:
+            if self.should_log_stats():
                 self.metrics.log_stats()
             
             error_str = str(exc).lower()

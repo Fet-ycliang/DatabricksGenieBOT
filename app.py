@@ -32,10 +32,12 @@ DEBUG:asyncio:Using proactor: IocpProactor
 from asyncio.log import logger
 import os
 import json
+import psutil
 from collections import defaultdict
 from functools import lru_cache
 from typing import Dict, List, Optional
 from aiohttp import web
+from aiohttp_compress import compress_middleware
 import asyncio
 import traceback
 from datetime import datetime, timezone
@@ -124,6 +126,36 @@ async def on_error(context: TurnContext, error: Exception):
 ADAPTER.on_turn_error = on_error
 
 GENIE_SERVICE = GenieService(CONFIG)
+
+
+# ✅ 應用程式生命週期管理
+async def on_startup(app: web.Application):
+    """應用程式啟動時初始化"""
+    logger.info("\n" + "="*80)
+    logger.info("🚀 Databricks Genie 機器人已啟動")
+    logger.info("="*80)
+
+
+async def on_cleanup(app: web.Application):
+    """應用程式關閉時清理資源"""
+    logger.info("\n" + "="*80)
+    logger.info("🛑 正在關閉應用程式並清理資源...")
+    
+    try:
+        # 清理 Genie Service 的資源
+        await GENIE_SERVICE.close()
+        logger.info("✅ Genie Service 已清理")
+        
+        # 記錄統計信息
+        GENIE_SERVICE.metrics.log_stats()
+        logger.info("✅ 統計信息已記錄")
+    except asyncio.TimeoutError as e:
+        logger.error(f"清理 Genie Service 時超時: {e}")
+    except Exception as e:
+        logger.error(f"清理資源時發生未預期的錯誤: {e}", exc_info=True)
+    finally:
+        logger.info("✅ 應用程式已安全關閉")
+        logger.info("="*80)
 
 
 class MyBot(ActivityHandler):
@@ -383,10 +415,11 @@ class MyBot(ActivityHandler):
             answer_json = json.loads(answer)
             response = process_query_results(answer_json)
             
-            # 調試日誌：輸出 answer_json 的內容
-            logger.info(f"[DEBUG] answer_json 鍵值: {list(answer_json.keys())}")
-            logger.info(f"[DEBUG] suggested_questions: {answer_json.get('suggested_questions', 'NOT FOUND')}")
-            logger.info(f"[DEBUG] chart_info: {answer_json.get('chart_info', 'NOT FOUND')}")
+            # ✅ 條件化調試日誌：僅在 DEBUG 模式啟用
+            if os.environ.get('DEBUG_MODE', '').lower() == 'true':
+                logger.debug(f"answer_json keys: {list(answer_json.keys())}")
+                logger.debug(f"suggested_questions: {answer_json.get('suggested_questions')}")
+                logger.debug(f"chart_info: {answer_json.get('chart_info')}")
             
             # 將使用者上下文添加到回應中
             response = f"**👤 {user_session.name}**\n\n{response}"
@@ -641,6 +674,75 @@ async def health_check(req: Request) -> Response:
         return json_response(data=error_response, status=503)
 
 
+async def get_performance_metrics(req: Request) -> Response:
+    """
+    ✅ 性能指標端點 - 系統可觀測性
+    提供系統資源使用情況、Genie 服務性能、用戶會話統計
+    
+    訪問: GET /api/metrics
+    
+    返回：
+    - system: CPU、記憶體、磁碟使用情況
+    - genie: Genie API 查詢統計（總查詢數、成功/失敗率、延遲分位數）
+    - sessions: 活躍用戶會話數
+    """
+    try:
+        # 系統資源使用情況
+        process = psutil.Process()
+        cpu_percent = process.cpu_percent(interval=0.1)
+        memory_info = process.memory_info()
+        
+        system_metrics = {
+            "cpu_usage_percent": cpu_percent,
+            "memory": {
+                "rss_mb": round(memory_info.rss / 1024 / 1024, 2),  # 實際物理記憶體
+                "vms_mb": round(memory_info.vms / 1024 / 1024, 2),  # 虛擬記憶體
+                "percent": process.memory_percent()
+            },
+            "threads": process.num_threads(),
+            "open_files": len(process.open_files())
+        }
+        
+        # Genie 服務性能指標
+        genie_metrics = {}
+        if GENIE_SERVICE and hasattr(GENIE_SERVICE, 'metrics'):
+            metrics = GENIE_SERVICE.metrics
+            avg_duration = (metrics.total_duration / metrics.total_queries) if metrics.total_queries > 0 else 0
+            success_rate = (metrics.successful_queries / metrics.total_queries * 100) if metrics.total_queries > 0 else 0
+            
+            genie_metrics = {
+                "total_queries": metrics.total_queries,
+                "successful_queries": metrics.successful_queries,
+                "failed_queries": metrics.failed_queries,
+                "success_rate_percent": round(success_rate, 2),
+                "average_duration_seconds": round(avg_duration, 3),
+                "total_duration_seconds": round(metrics.total_duration, 2)
+            }
+        
+        # 用戶會話統計
+        active_sessions = len(BOT.user_sessions) if BOT else 0
+        
+        metrics_response = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "system": system_metrics,
+            "genie_service": genie_metrics,
+            "user_sessions": {
+                "active_count": active_sessions
+            }
+        }
+        
+        return json_response(data=metrics_response, status=200)
+        
+    except Exception as e:
+        logger.error(f"❌ 獲取性能指標失敗: {str(e)}")
+        error_response = {
+            "error": "Failed to retrieve performance metrics",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "details": str(e)
+        }
+        return json_response(data=error_response, status=500)
+
+
 async def messages(req: Request) -> Response:
     if "application/json" in req.headers["Content-Type"]:
         body = await req.json()
@@ -670,9 +772,20 @@ async def messages(req: Request) -> Response:
 
 
 def init_func(argv):
-    APP = web.Application(middlewares=[aiohttp_error_middleware])
+    # 添加 GZip 壓縮中間件，自動壓縮響應
+    APP = web.Application(middlewares=[
+        aiohttp_error_middleware,
+        compress_middleware
+    ])
+    
+    # ✅ 註冊應用程式生命週期處理器
+    APP.on_startup.append(on_startup)
+    APP.on_cleanup.append(on_cleanup)
+    
     # 健康檢查端點
     APP.router.add_get("/api/health", health_check)
+    # 性能指標端點
+    APP.router.add_get("/api/metrics", get_performance_metrics)
     # Bot 訊息端點
     APP.router.add_post("/api/messages", messages)
     return APP
