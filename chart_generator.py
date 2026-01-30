@@ -274,3 +274,84 @@ def create_chart_card_with_image(chart_info: dict) -> dict:
     }
     
     return card
+
+
+def create_suggested_questions_card(suggested_questions: list) -> dict:
+    """創建包含建議問題的 Adaptive Card
+    
+    用户可以點擊按鈕來選擇建議問題進行查詢
+    
+    Args:
+        suggested_questions: 建議問題列表
+    
+    Returns:
+        Adaptive Card JSON 結構，包含可點擊的建議問題按鈕
+    """
+    if not suggested_questions or len(suggested_questions) == 0:
+        return None
+    
+    # 構建按鈕（最多 3 個）
+    actions = [
+        {
+            "type": "Action.Submit",
+            "title": f"❓ {question[:35]}{'...' if len(question) > 35 else ''}",
+            "data": {
+                "action": "ask_suggested_question",
+                "question": question
+            }
+        }
+        for question in suggested_questions[:3]
+    ]
+    
+    card = {
+        "type": "AdaptiveCard",
+        "version": "1.5",
+        "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+        "body": [
+            {
+                "type": "Container",
+                "style": "emphasis",
+                "items": [
+                    {
+                        "type": "ColumnSet",
+                        "columns": [
+                            {
+                                "type": "Column",
+                                "width": "auto",
+                                "items": [
+                                    {
+                                        "type": "TextBlock",
+                                        "text": "💡",
+                                        "size": "Large"
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "Column",
+                                "width": "stretch",
+                                "items": [
+                                    {
+                                        "type": "TextBlock",
+                                        "text": "建議問題",
+                                        "weight": "Bolder",
+                                        "size": "Medium",
+                                        "color": "Accent"
+                                    },
+                                    {
+                                        "type": "TextBlock",
+                                        "text": "點擊下方按鈕繼續詢問",
+                                        "isSubtle": True,
+                                        "spacing": "None",
+                                        "size": "Small"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "actions": actions
+    }
+    
+    return card

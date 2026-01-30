@@ -72,6 +72,7 @@ from command_handler import handle_special_commands
 from feedback_cards import create_error_card, create_thank_you_card, send_feedback_card
 from welcome_messages import build_authenticated_welcome, build_unauthenticated_welcome
 from graph_service import GraphService, get_teams_user_info
+from chart_generator import create_chart_card_with_image, create_suggested_questions_card
 
 
 CONFIG = DefaultConfig()
@@ -405,7 +406,6 @@ class MyBot(ActivityHandler):
             
             # 如果有圖表信息，發送圖表卡片
             if 'chart_info' in answer_json and answer_json['chart_info'].get('suitable'):
-                from chart_generator import create_chart_card_with_image
                 chart_card = create_chart_card_with_image(answer_json['chart_info'])
                 if chart_card:
                     from botbuilder.schema import Attachment
@@ -418,6 +418,21 @@ class MyBot(ActivityHandler):
                         attachments=[chart_attachment]
                     )
                     await turn_context.send_activity(chart_message)
+            
+            # 如果有建議問題，發送建議問題卡片
+            if 'suggested_questions' in answer_json and answer_json['suggested_questions']:
+                suggested_card = create_suggested_questions_card(answer_json['suggested_questions'])
+                if suggested_card:
+                    from botbuilder.schema import Attachment
+                    suggested_attachment = Attachment(
+                        content_type="application/vnd.microsoft.card.adaptive",
+                        content=suggested_card
+                    )
+                    suggested_message = Activity(
+                        type=ActivityTypes.message,
+                        attachments=[suggested_attachment]
+                    )
+                    await turn_context.send_activity(suggested_message)
             
             # 作為單獨的訊息發送回饋卡
             await send_feedback_card(turn_context, user_session, CONFIG.ENABLE_FEEDBACK_CARDS)
@@ -467,11 +482,50 @@ class MyBot(ActivityHandler):
             return InvokeResponse(status_code=500, body="Error processing invoke activity")
 
     async def on_adaptive_card_invoke(self, turn_context: TurnContext, invoke_value: Dict) -> InvokeResponse:
-        # 處理 Adaptive Card 按鈕點擊（回饋提交）
+        # 處理 Adaptive Card 按鈕點擊（回饋提交、建議問題等）
         try:
             action = invoke_value.get("action")
             
-            if action == "feedback":
+            # 處理點擊建議問題按鈕
+            if action == "ask_suggested_question":
+                question = invoke_value.get("question")
+                if not question:
+                    return InvokeResponse(status_code=400, body="Missing question data")
+                
+                logger.info(f"使用者點擊建議問題: {question}")
+                
+                # 將建議問題作為新的訊息發送到訊息處理流程
+                # 建立新的 Activity，就像使用者輸入了這個問題
+                suggested_message_activity = Activity(
+                    type=ActivityTypes.message,
+                    text=question,
+                    from_property=turn_context.activity.from_property,
+                    conversation=turn_context.activity.conversation,
+                    channel_id=turn_context.activity.channel_id,
+                    service_url=turn_context.activity.service_url,
+                    timestamp=datetime.now(timezone.utc)
+                )
+                
+                # 建立新的 turn context 來處理建議問題
+                suggested_turn_context = TurnContext(
+                    adapter=ADAPTER,
+                    activity=suggested_message_activity,
+                    on_send_activities=turn_context.on_send_activities,
+                    on_update_activity=turn_context.on_update_activity,
+                    on_delete_activity=turn_context.on_delete_activity
+                )
+                
+                # 處理建議問題（遞迴調用 on_message_activity）
+                await self.on_message_activity(suggested_turn_context)
+                
+                # 返回成功回應
+                return InvokeResponse(
+                    status_code=200,
+                    body={"status": "success", "message": "建議問題已提交"}
+                )
+            
+            # 處理回饋動作
+            elif action == "feedback":
                 message_id = invoke_value.get("messageId")
                 user_id = invoke_value.get("userId")
                 feedback = invoke_value.get("feedback")
