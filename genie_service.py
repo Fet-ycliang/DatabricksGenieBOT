@@ -446,6 +446,7 @@ class GenieService:
                             if hasattr(attachment.suggested_questions, 'questions') and attachment.suggested_questions.questions:
                                 suggested_questions = list(attachment.suggested_questions.questions)
                                 logger.info(f"[{request_id}] ✅ 成功提取 {len(suggested_questions)} 個建議問題")
+                                logger.info(f"[{request_id}] 💡 建議問題內容: {suggested_questions}")
                                 break
                     if not suggested_questions:
                         logger.info(f"[{request_id}] ℹ️ 訊息已完成但未找到建議問題")
