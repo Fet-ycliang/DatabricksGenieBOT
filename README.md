@@ -30,13 +30,10 @@
 
 ### 🚀 快速開始 (立即改善)
 - **[QUICK_START.md](QUICK_START.md)** - 5 分鐘快速安裝指南和常見問題修復
-- **[OPTIMIZATION_EXECUTIVE_SUMMARY.md](OPTIMIZATION_EXECUTIVE_SUMMARY.md)** - 3 大核心改善概述和行動計劃
-- **[QUICK_OPTIMIZATION_GUIDE.md](QUICK_OPTIMIZATION_GUIDE.md)** - 完整的代碼示例和集成步驟
+- **[OPTIMIZATION.md](OPTIMIZATION.md)** - 完整性能優化指南（實施狀態、快速開始、詳細建議）
 
 ### 🔧 故障排查
-- **[KALEIDO_CHROME_TROUBLESHOOTING.md](KALEIDO_CHROME_TROUBLESHOOTING.md)** - Chrome/Kaleido 依賴問題修復
-- **[GRAPH_API_OAUTH_TROUBLESHOOTING.md](GRAPH_API_OAUTH_TROUBLESHOOTING.md)** - OAuth 配置問題修復
-- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - 通用故障排查
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - 完整故障排查指南（所有常見問題和解決方案）
 
 ### 📊 詳細分析
 - **[ARCHITECTURE_OPTIMIZATION_GUIDE.md](ARCHITECTURE_OPTIMIZATION_GUIDE.md)** - 完整的架構改善建議和優先級矩陣

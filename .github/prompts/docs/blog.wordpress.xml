@@ -1,0 +1,176 @@
+Code will be generated, not written. Most enterprise AI workloads are net-new microservices. Modular, greenfield work. Perfect for coding agents.
+
+The catch? Out-of-the-box agents lack domain knowledge about your SDKs and patterns. But frontier LLMs are extraordinarily sample efficient. The patterns you need are already encoded in their latent space from pretraining. All you need is the right activation context. That is what skills do, and <a href="https://github.com/microsoft/agent-skills">Agent Skills</a> ships 127 of them for Azure and Microsoft Foundry development.
+<h2>What's in Agent Skills?</h2>
+<a href="https://github.com/microsoft/agent-skills">github.com/microsoft/agent-skills</a> is a collection of skills, prompts, agents, and MCP configurations that provide the activation context to specialize coding agents for Microsoft Foundry and Azure development.
+
+<a href="https://devblogs.microsoft.com/all-things-azure/wp-content/uploads/sites/83/2026/01/agent-skills-image.webp"><img class="alignnone size-large wp-image-1794" src="https://devblogs.microsoft.com/all-things-azure/wp-content/uploads/sites/83/2026/01/agent-skills-image-1024x544.webp" alt="Agent Skills architecture showing selective context injection" width="1024" height="544" /></a>
+
+The repo contains:
+<ul>
+ 	<li><strong>Skills</strong>: Modular knowledge packages for specific domains (Cosmos DB, Foundry IQ, AZD Deployment, etc.)</li>
+ 	<li><strong>Prompts</strong>: Reusable templates for code reviews, component creation, endpoints</li>
+ 	<li><strong>Agents</strong>: Persona definitions (backend, frontend, planner)</li>
+ 	<li><strong>MCP Servers</strong>: Pre-configured servers for GitHub, Playwright, Microsoft Docs, Context7</li>
+ 	<li><strong>Context7 Integration</strong>: Indexed Foundry documentation at <a href="https://context7.com/microsoft/agent-skills">context7.com/microsoft/agent-skills</a></li>
+</ul>
+<h2>Systems Thinking First, Then Skills</h2>
+Before loading skills into your agent, you need a mental model of what you are building, reducing your unknown-unknowns. Skills amplify your direction, they do not replace it.
+
+My recommendation: do the basic hello world for each SDK you plan to use. For example, for Foundry IQ, walk through the <a href="https://learn.microsoft.com/en-us/azure/search/agentic-retrieval-how-to-create-pipeline">agentic retrieval pipeline quickstart</a>. Understand the abstractions at a high level. Know what Cosmos DB containers are, how Azure AI Search indexes work, what a Foundry agent does. You need this picture to prompt and steer the agent effectively.
+
+Beyond that high-level understanding? You probably will not be hand-coding the idiomatic patterns for how you consume these services. The model already has these patterns encoded. Skills surface them. You bring the architecture and intent. The agent brings the implementation details that are already latent in its weights.
+<h2>Avoiding Context Rot</h2>
+<strong>Do not load all skills at once.</strong> Context rot occurs when your agent's context window gets cluttered with irrelevant information, degrading output quality.
+
+Loading everything will:
+<ul>
+ 	<li>Dilute the agent's attention across unrelated domains</li>
+ 	<li>Waste precious context window tokens</li>
+ 	<li>Cause the agent to conflate patterns from different frameworks</li>
+</ul>
+<strong>Only copy the specific skills essential for your current project.</strong> High signal-to-noise ratio is everything.
+
+The same principle applies to MCP servers. Do not enable every server in your config. Too many tools create the same dilution problem. Pick the servers relevant to your current task.
+<h2>Quick Start</h2>
+<h3>Option 1: Install via skills.sh</h3>
+The easiest way to add skills is through <a href="https://skills.sh/microsoft/agent-skills">skills.sh</a>:
+<pre class="prettyprint">npx skills add microsoft/agent-skills
+</pre>
+You can also browse and install individual skills from <a href="https://skillsmp.com/skills/microsoft-agent-skills-github-skills-azure-ai-voicelive-skill-skill-md">skillsmp.com</a>.
+<h3>Option 2: Copy Only the Skills You Need</h3>
+Browse available skills and copy relevant ones to your project:
+<pre class="prettyprint"># Clone the repo
+git clone https://github.com/microsoft/agent-skills.git
+
+# Copy specific skills to your project
+cp -r agent-skills/.github/skills/cosmos-db-python-skill your-project/.github/skills/
+cp -r agent-skills/.github/skills/foundry-iq-python your-project/.github/skills/
+</pre>
+Or use symlinks. For multi-project setups:
+<pre class="prettyprint"># macOS/Linux
+ln -s /path/to/agent-skills/.github/skills/mcp-builder /path/to/your-project/.github/skills/mcp-builder
+
+# Windows (PowerShell as Admin)
+New-Item -ItemType SymbolicLink -Path ".github\skills\mcp-builder" -Target "C:\agent-skills\.github\skills\mcp-builder"
+</pre>
+For sharing skills across different coding agents in the same repo:
+<pre class="prettyprint"># Symlink to multiple agent config directories
+ln -s ../.github/skills .opencode/skills
+ln -s ../.github/skills .claude/skills
+</pre>
+<h3>Configure Your Agent</h3>
+<strong>GitHub Copilot:</strong> Skills are auto-discovered from <code>.github/skills/</code>
+
+<strong>Claude Code:</strong> Reference <code>SKILL.md</code> files in your project instructions or <code>CLAUDE.md</code>
+
+<strong>GitHub Copilot CLI:</strong> Works with the same skill structure
+<h3>Add MCP Servers</h3>
+Copy the MCP configuration to your project:
+<pre class="prettyprint">cp agent-skills/.vscode/mcp.json your-project/.vscode/
+</pre>
+Then remove the servers you do not need. This gives your agent access to:
+<ul>
+ 	<li>Microsoft Learn MCP: Ground agents in official docs</li>
+ 	<li>Context7: Indexed Foundry documentation</li>
+ 	<li>GitHub, Playwright, Terraform servers</li>
+ 	<li>Sequential Thinking, Memory tools</li>
+</ul>
+<h3>(Optional) Use Context7 for Foundry Docs</h3>
+For real-time Foundry documentation access, add the Context7 MCP server or use directly:
+
+<strong>Context7 URL:</strong> <a href="https://context7.com/microsoft/agent-skills">https://context7.com/microsoft/agent-skills</a>
+
+A GitHub workflow runs weekly to sync the latest Foundry documentation updates automatically.
+<h2>Available Skills</h2>
+<strong>127 skills total</strong> — 14 core (auto-discovered) + 113 extended (copy as needed).
+<h3>Core Skills</h3>
+Auto-discovered from <code>.github/skills/</code>:
+<table>
+<tbody>
+<tr>
+<th>Category</th>
+<th>Skills</th>
+</tr>
+<tr>
+<td><strong>AI Foundry</strong></td>
+<td><code>foundry-sdk-python</code>, <code>foundry-iq-python</code>, <code>azure-ai-agents-python</code>, <code>agent-framework-azure-hosted-agents</code></td>
+</tr>
+<tr>
+<td><strong>AI Services</strong></td>
+<td><code>azure-ai-search-python</code>, <code>azure-ai-voicelive</code></td>
+</tr>
+<tr>
+<td><strong>Backend</strong></td>
+<td><code>fastapi-router</code>, <code>pydantic-models</code>, <code>cosmos-db-python-skill</code></td>
+</tr>
+<tr>
+<td><strong>Infrastructure</strong></td>
+<td><code>azd-deployment</code></td>
+</tr>
+<tr>
+<td><strong>Tooling</strong></td>
+<td><code>skill-creator</code>, <code>mcp-builder</code>, <code>github-issue-creator</code></td>
+</tr>
+<tr>
+<td><strong>Other</strong></td>
+<td><code>podcast-generation</code></td>
+</tr>
+</tbody>
+</table>
+<h3>Extended Catalog</h3>
+113 skills in <code>skills/</code> organized by language. Copy what you need:
+<table>
+<tbody>
+<tr>
+<th>Language</th>
+<th>Count</th>
+<th>Coverage</th>
+</tr>
+<tr>
+<td><strong>Python</strong></td>
+<td>33</td>
+<td>AI, Data, Messaging, Monitoring, Identity, Security, Integration</td>
+</tr>
+<tr>
+<td><strong>.NET</strong></td>
+<td>29</td>
+<td>Foundry, AI, Data, Messaging, Identity, Security, Partner</td>
+</tr>
+<tr>
+<td><strong>TypeScript</strong></td>
+<td>23</td>
+<td>Foundry, AI, Data, Messaging, Frontend, Identity</td>
+</tr>
+<tr>
+<td><strong>Java</strong></td>
+<td>28</td>
+<td>Foundry, AI, Data, Messaging, Communication, Identity</td>
+</tr>
+</tbody>
+</table>
+See the full catalog at <a href="https://github.com/microsoft/agent-skills/blob/main/CATALOG.md">CATALOG.md</a>.
+<h2>Scaling Beyond Static Skills</h2>
+For larger codebases where static skills are not enough:
+<ul>
+ 	<li><strong>AST-based Memory Systems</strong>: Hierarchical graph representation of code structure</li>
+ 	<li><strong>Context Graph</strong>: Knowledge graphs tracking component relationships and dependencies</li>
+</ul>
+These help agents maintain understanding without cramming everything into the context window.
+<h2>What's Next</h2>
+This is v1. I will be adding more idiomatic skills for Microsoft SDKs, covering the cloud services and frameworks teams actually use.
+
+I am also testing agent skills with <a href="https://github.com/github/copilot-sdk">copilot-sdk</a> to validate skill quality programmatically. You can see a sample test harness at <a href="https://github.com/microsoft-foundry/copilot-sdk-samples/tree/main/samples/skill-testing/sdk">copilot-sdk-samples/skill-testing</a>.
+
+For now, start with <a href="https://github.com/microsoft/agent-skills">github.com/microsoft/agent-skills</a>, pick only what you need, and keep that signal-to-noise ratio high.
+<h2>Resources</h2>
+<ul>
+ 	<li><a href="https://github.com/microsoft/agent-skills">Agent Skills Repository</a></li>
+ 	<li><a href="https://skills.sh/microsoft/agent-skills">skills.sh: Install Skills</a></li>
+ 	<li><a href="https://skillsmp.com/skills/microsoft-agent-skills-github-skills-azure-ai-voicelive-skill-skill-md">skillsmp.com: Browse Skills</a></li>
+ 	<li><a href="https://context7.com/microsoft/agent-skills">Context7: Foundry Docs</a></li>
+ 	<li><a href="https://github.com/github/copilot-sdk">Copilot SDK</a></li>
+ 	<li><a href="https://devblogs.microsoft.com/all-things-azure/claude-code-microsoft-foundry-enterprise-ai-coding-agent-setup/">Claude Code + Foundry Setup Guide</a></li>
+ 	<li><a href="https://devblogs.microsoft.com/all-things-azure/codex-azure-openai-integration-fast-secure-code-development/">Codex + Azure OpenAI Integration</a></li>
+ 	<li><a href="https://learn.microsoft.com/en-us/azure/ai-foundry/">Microsoft Foundry Docs</a></li>
+</ul>
