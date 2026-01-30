@@ -57,6 +57,9 @@ def generate_chart_image(chart_info: dict) -> str:
             # 折線圖
             plt.plot(categories, values, marker='o', linewidth=2.5, markersize=8, color='#2E86AB')
             plt.fill_between(range(len(categories)), values, alpha=0.3, color='#2E86AB')
+            # 在數據點上標上數值
+            for i, (cat, val) in enumerate(zip(categories, values)):
+                plt.text(i, val, f'{val:,.0f}', ha='center', va='bottom', fontsize=10, fontweight='bold')
             plt.xlabel(category_col, fontsize=12, fontweight='bold')
             plt.ylabel(value_col, fontsize=12, fontweight='bold')
             plt.title(f'{category_col} vs {value_col}', fontsize=16, fontweight='bold', pad=20)
@@ -66,7 +69,10 @@ def generate_chart_image(chart_info: dict) -> str:
         else:  # bar（預設長條圖）
             # 長條圖
             colors = sns.color_palette("viridis", len(categories))
-            sns.barplot(x=categories, y=values, palette=colors, width=0.7)
+            ax = sns.barplot(x=categories, y=values, palette=colors, width=0.7)
+            # 在柱狀圖頂部標上數值
+            for i, (cat, val) in enumerate(zip(categories, values)):
+                ax.text(i, val, f'{val:,.0f}', ha='center', va='bottom', fontsize=10, fontweight='bold')
             plt.xlabel(category_col, fontsize=12, fontweight='bold')
             plt.ylabel(value_col, fontsize=12, fontweight='bold')
             plt.title(f'{category_col} vs {value_col}', fontsize=16, fontweight='bold', pad=20)
@@ -136,7 +142,7 @@ def create_chart_card_with_image(chart_info: dict) -> dict:
                             "type": "Column",
                             "width": "stretch",
                             "items": [
-                                {"type": "TextBlock", "text": "��� 數據視覺化", "weight": "Bolder", "size": "Medium", "color": "Accent"},
+                                {"type": "TextBlock", "text": "數據視覺化", "weight": "Bolder", "size": "Medium", "color": "Accent"},
                                 {"type": "TextBlock", "text": f"{category_col} vs {value_col}", "isSubtle": True, "spacing": "None"}
                             ]
                         }
@@ -144,7 +150,7 @@ def create_chart_card_with_image(chart_info: dict) -> dict:
                 }]
             },
             {"type": "Image", "url": image_url, "size": "Stretch", "spacing": "Medium"},
-            {"type": "TextBlock", "text": f"✨ 共 {len(chart_data)} 筆數據 | Plotly 生成", "wrap": True, "isSubtle": True, "size": "Small", "horizontalAlignment": "Center", "spacing": "Small"}
+            {"type": "TextBlock", "text": f"✨ 共 {len(chart_data)} 筆數據", "wrap": True, "isSubtle": True, "size": "Small", "horizontalAlignment": "Center", "spacing": "Small"}
         ]
     }
 
