@@ -43,6 +43,12 @@ These guidelines must be followed for all changes in this project.
 - **Format**: `type: description` (e.g., `feat: 新增登入功能`, `fix: 修復 Teams 連線問題`).
 - **Types**: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`.
 
+### Git Merge Strategy
+
+- **Rule**: All merges into the `main` branch must use the `--no-ff` (no fast-forward) option.
+- **Reasoning**: To preserve the commit history of feature branches and maintain a clear lineage of changes, even if the merge could be a fast-forward.
+- **Command**: `git merge --no-ff <branch_name>`
+
 ## 2. Coding Standards
 
 ### Python
