@@ -37,6 +37,12 @@ These guidelines must be followed for all changes in this project.
 - **Rule**: All text sent to users (Activity text, Adaptive Cards, Error messages) must be in Traditional Chinese (Taiwan locale).
 - **Tone**: Professional, helpful, and polite.
 
+### Git Commit Messages
+
+- **Rule**: All git commit messages must be in **Traditional Chinese (繁體中文)**.
+- **Format**: `type: description` (e.g., `feat: 新增登入功能`, `fix: 修復 Teams 連線問題`).
+- **Types**: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`.
+
 ## 2. Coding Standards
 
 ### Python
