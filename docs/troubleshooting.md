@@ -167,7 +167,7 @@ Source IP address: X.X.X.X is blocked by Databricks IP ACL for workspace
    **詳細說明**，請參閱：[設定帳戶主控台的 IP 存取清單](https://docs.databricks.com/aws/en/security/network/front-end/ip-access-list-account)
 
 3. **將 IP 新增至 Databricks 帳戶允許清單（CLI 方法）：**
-   
+
    如果您偏好使用 Databricks CLI，您可以透過程式設計方式將 IP 新增至您的帳戶：
 
    ```bash
@@ -425,3 +425,18 @@ for key, value in os.environ.items():
 - [ ] 測試資料查詢是否傳回結果
 - [ ] 測試回饋按鈕是否出現（如果已啟用）
 - [ ] 測試 `whoami` 是否顯示正確的使用者資訊
+
+### 基本步驟
+
+0. Python 版本 3.11+
+1. 使用 `uv sync` 安裝所需相依性
+2. 設定必要的環境變數（請參閱下面的環境變數部分）
+3. 執行 `uv run fastapi dev app/main.py` 以啟動機器人
+4. 透過 Azure Bot Framework 呼叫機器人端點，或將其部署在 Web 應用程式上以處理呼叫。
+
+### 🔍 環境診斷
+
+```bash
+# 自動檢查和修復常見問題
+python scripts/diagnose.py
+```

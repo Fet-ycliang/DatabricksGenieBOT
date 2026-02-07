@@ -7,7 +7,9 @@ from typing import Dict
 from botbuilder.core import TurnContext
 from botbuilder.schema import Activity, ActivityTypes
 
-from user_session import UserSession
+from botbuilder.schema import Activity, ActivityTypes
+
+from app.models.user_session import UserSession
 
 
 async def handle_special_commands(
@@ -103,7 +105,7 @@ async def handle_special_commands(
                     user_detail.update(full_profile)
                     
                     # 創建用戶資料卡片
-                    from graph_service import GraphService
+                    from app.services.graph import GraphService
                     user_card = GraphService.create_user_profile_card(user_detail)
                     
                     card_attachment = Attachment(

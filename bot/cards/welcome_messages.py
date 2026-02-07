@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from user_session import UserSession
+from app.models.user_session import UserSession
 
 
 def build_authenticated_welcome(user_session: UserSession, is_emulator: bool, config) -> str:

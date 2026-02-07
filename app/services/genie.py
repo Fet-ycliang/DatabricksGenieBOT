@@ -16,8 +16,11 @@ import aiohttp
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.service.dashboards import GenieAPI
 
-from config import DefaultConfig
-from chart_generator import create_chart_card_with_image
+from databricks.sdk import WorkspaceClient
+from databricks.sdk.service.dashboards import GenieAPI
+
+from app.core.config import DefaultConfig
+from bot.cards.chart_generator import create_chart_card_with_image
 
 
 class QueryMetrics:

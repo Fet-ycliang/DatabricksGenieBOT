@@ -8,7 +8,7 @@ from typing import Dict
 from botbuilder.core import TurnContext
 from botbuilder.schema import Activity, ActivityTypes
 
-from user_session import UserSession
+from app.models.user_session import UserSession
 
 
 def create_feedback_card(message_id: str, user_id: str) -> Dict:

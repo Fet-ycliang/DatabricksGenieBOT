@@ -9,14 +9,14 @@ https://learn.microsoft.com/azure/app-service/monitor-instances-health-check
 https://docs.microsoft.com/azure/architecture/patterns/health-endpoint-monitoring
 """
 
-import json
-import logging
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 from aiohttp import web
 from aiohttp.web import Request, json_response
 
-logger = logging.getLogger(__name__)
+from app.services.genie import GenieService
+from app.services.graph import GraphService
+# from app.core.adapter import ADAPTER # If needed
 
 
 class HealthCheckStatus:

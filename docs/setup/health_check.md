@@ -14,6 +14,7 @@
 **URL**: `https://<your-app-name>.azurewebsites.net/api/health`
 
 **回應範例** (200 - 健康):
+
 ```json
 {
   "status": "healthy",
@@ -50,6 +51,7 @@
 ```
 
 **回應範例** (503 - 異常):
+
 ```json
 {
   "status": "unhealthy",
@@ -66,11 +68,11 @@
 2. 導航到 **App Service** → 您的應用程式 → **Health check**
 3. 設置以下值：
 
-| 設定項 | 值 |
-|--------|-----|
-| Health check path | `/api/health` |
-| Number of probes | 10 |
-| Interval (seconds) | 60 |
+| 設定項             | 值            |
+| ------------------ | ------------- |
+| Health check path  | `/api/health` |
+| Number of probes   | 10            |
+| Interval (seconds) | 60            |
 
 ### 2.2 在 Azure 入口網站設置監控告警
 
@@ -128,7 +130,7 @@ az webapp config diagnostic list \
 
 ```bash
 # 使用 curl 測試健康檢查
-curl -v http://localhost:3978/api/health
+curl -v http://localhost:8000/health
 
 # 預期輸出 (200 OK):
 # {
@@ -146,7 +148,7 @@ import json
 
 # 健康檢查
 print("=== Health Check ===")
-response = requests.get("http://localhost:3978/api/health")
+response = requests.get("http://localhost:8000/health")
 print(f"Status: {response.status_code}")
 print(json.dumps(response.json(), indent=2))
 ```
@@ -168,7 +170,7 @@ Azure 會自動記錄以下指標：
 requests
 | where url contains "/api/health"
 | where timestamp > ago(24h)
-| summarize 
+| summarize
     SuccessCount = sum(toint(success)),
     FailureCount = sum(toint(not success)),
     AvgDuration = avg(duration)
@@ -193,11 +195,11 @@ az monitor metrics alert create \
 
 ### 7.1 常見問題
 
-| 問題 | 原因 | 解決方案 |
-|------|------|--------|
-| Health Check 返回 503 | 依賴服務不可用 | 檢查 Databricks/Graph API 連接 |
-| 頻繁的實例重啟 | Health Check 持續失敗 | 檢查應用程式日誌，查看具體的故障原因 |
-| 高延遲 (> 10 秒) | 後端服務響應慢 | 檢查 Databricks API 性能，考慮添加超時 |
+| 問題                  | 原因                  | 解決方案                               |
+| --------------------- | --------------------- | -------------------------------------- |
+| Health Check 返回 503 | 依賴服務不可用        | 檢查 Databricks/Graph API 連接         |
+| 頻繁的實例重啟        | Health Check 持續失敗 | 檢查應用程式日誌，查看具體的故障原因   |
+| 高延遲 (> 10 秒)      | 後端服務響應慢        | 檢查 Databricks API 性能，考慮添加超時 |
 
 ### 7.2 診斷命令
 
@@ -264,11 +266,11 @@ async def health_check(req: Request) -> Response:
 # 即使某些依賴不可用，仍然返回 200
 async def health_check(req: Request) -> Response:
     response = HealthCheckResponse("healthy")
-    
+
     # 可選依賴
     if not check_optional_service():
         response.status = "degraded"  # 不是 unhealthy
-    
+
     return json_response(response.to_dict(), status=200)  # 仍然返回 200
 ```
 
@@ -280,6 +282,6 @@ async def health_check(req: Request) -> Response:
 
 ## 10. 相關檔案
 
-- `health_check.py`: 健康檢查實現模組
-- `app.py`: 主應用程式，包含 `/api/health` 路由
+- `app/services/health_check.py`: 健康檢查實現模組
+- `app/main.py`: 主應用程式，包含 `/health` 路由
 - `web.config`: IIS 配置，包含 health check 設定

@@ -44,7 +44,7 @@ class Diagnostics:
             self.issues.append("未激活虛擬環境")
             self.fixes.append({
                 'issue': '未激活虛擬環境',
-                'fix': 'source env/bin/activate  # Linux/Mac\n或\n.\\env\\Scripts\\Activate.ps1  # Windows'
+                'fix': 'source .venv/bin/activate  # Linux/Mac\n或\n.\\.venv\\Scripts\\Activate.ps1  # Windows'
             })
             return False
         
@@ -58,8 +58,8 @@ class Diagnostics:
         required_packages = {
             'aiohttp': '>=3.8',
             'botbuilder-core': '>=4.17',
-            'plotly': '>=5.0',
-            'kaleido': '>=0.2',
+            'matplotlib': '>=3.7.0',
+            'seaborn': '>=0.12.0',
         }
         
         missing = []
@@ -76,7 +76,7 @@ class Diagnostics:
             self.issues.append(f"缺少包: {', '.join(missing)}")
             self.fixes.append({
                 'issue': '缺少必要的包',
-                'fix': f"pip install {' '.join(missing)}"
+                'fix': f"uv sync"
             })
             return False
         
@@ -124,7 +124,7 @@ class Diagnostics:
             
             self.fixes.append({
                 'issue': '缺少 Chrome',
-                'fix': f'方案 1 (推薦): plotly_get_chrome\n方案 2: {fix_cmd}'
+                'fix': f'{fix_cmd}'
             })
             return False
         
@@ -155,7 +155,7 @@ class Diagnostics:
                 self.issues.append(f"Kaleido 圖表生成失敗: {e}")
                 self.fixes.append({
                     'issue': 'Kaleido 圖表生成失敗',
-                    'fix': 'plotly_get_chrome  # 重新安裝 Chrome'
+                    'fix': '請確保 Chrome 已正確安裝'
                 })
                 return False
         
@@ -206,9 +206,8 @@ class Diagnostics:
             self.check_python_version,
             self.check_venv,
             self.check_environment_variables,
+            self.check_environment_variables,
             self.check_requirements,
-            self.check_chrome,
-            self.check_kaleido,
         ]
         
         results = []
@@ -256,17 +255,6 @@ class Diagnostics:
                          check=True, capture_output=True)
             print("   ✅ pip 已升級")
             
-            # 重新安裝 kaleido
-            print("📦 安裝 kaleido...")
-            subprocess.run([sys.executable, '-m', 'pip', 'install', '--upgrade', 'kaleido'],
-                         check=True, capture_output=True)
-            print("   ✅ kaleido 已安裝")
-            
-            # 嘗試使用 plotly_get_chrome
-            print("📦 下載 Chrome...\n")
-            subprocess.run(['plotly_get_chrome'], check=False)
-            print("\n   ✅ Chrome 下載完成")
-            
             print("\n✅ 自動修復完成！請重新運行診斷。")
             return True
         
@@ -298,9 +286,7 @@ def main():
         
         if not success:
             print("\n📖 更多幫助，請參考:")
-            print("   - KALEIDO_CHROME_TROUBLESHOOTING.md (Chrome 依賴問題)")
-            print("   - GRAPH_API_OAUTH_TROUBLESHOOTING.md (OAuth 問題)")
-            print("   - TROUBLESHOOTING.md (通用故障排查)")
+            print("   - docs/troubleshooting.md (通用故障排查)")
     
     # 返回狀態碼
     sys.exit(0 if success else 1)

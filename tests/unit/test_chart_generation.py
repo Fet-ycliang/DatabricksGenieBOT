@@ -1,6 +1,10 @@
 """測試圖表生成功能"""
 
-from chart_generator import generate_chart_image, create_chart_card_with_image
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
+
+from bot.cards.chart_generator import generate_chart_image, create_chart_card_with_image
 
 # 測試數據 - 長條圖
 test_bar_data = {
