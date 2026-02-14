@@ -1,51 +1,51 @@
-# Agent Integration with Skills
+# 技能 (Skills) 之 Agent 整合
 
-How AI agents discover, load, and use skills from this repository.
+AI Agent 如何從此儲存庫發現、載入和使用技能。
 
-## Skill Discovery Mechanism
+## 技能發現機制
 
-Agents discover skills through a two-phase process:
+Agent 透過兩階段流程發現技能：
 
-### Phase 1: Directory Scanning
+### 第一階段：目錄掃描
 
-At startup, agents scan configured skill directories (typically `.github/skills/`) for folders containing a `SKILL.md` file:
+在啟動時，Agent 會掃描設定好的技能目錄 (通常是 `.github/skills/`)，尋找包含 `SKILL.md` 檔案的資料夾：
 
 ```
 .github/skills/
 ├── azure-cosmos-db-py/
-│   └── SKILL.md          # Valid skill
+│   └── SKILL.md          # 有效的技能
 ├── azure-ai-agents-ts/
-│   └── SKILL.md          # Valid skill
+│   └── SKILL.md          # 有效的技能
 ├── mcp-builder/
-│   └── SKILL.md          # Valid skill
+│   └── SKILL.md          # 有效的技能
 └── some-folder/
-    └── README.md         # NOT a skill (no SKILL.md)
+    └── README.md         # 不是技能 (沒有 SKILL.md)
 ```
 
-### Phase 2: Metadata Extraction
+### 第二階段：中繼資料擷取
 
-For each discovered skill, agents parse only the YAML frontmatter:
+對於每個發現的技能，Agent 僅解析 YAML frontmatter：
 
 ```yaml
 ---
 name: azure-cosmos-db-py
-description: Build Azure Cosmos DB NoSQL services with Python/FastAPI following production-grade patterns.
+description: 使用 Python/FastAPI 依照生產級模式建置 Azure Cosmos DB NoSQL 服務。
 ---
 ```
 
-This metadata is loaded into the agent's context at startup, using ~50-100 tokens per skill.
+這個中繼資料會在啟動時載入到 Agent 的 context 中，每個技能約佔用 50-100 個 tokens。
 
-## VS Code / GitHub Copilot Discovery
+## VS Code / GitHub Copilot 發現
 
-GitHub Copilot and VS Code agents discover skills via:
+GitHub Copilot 和 VS Code agents 透過以下方式發現技能：
 
-1. **Workspace scanning**: Skills in `.github/skills/` are automatically detected
-2. **Copilot instructions**: The `.github/copilot-instructions.md` file references available skills
-3. **Agent personas**: Files in `.github/agents/` (e.g., `backend.agent.md`) can specify which skills to load
+1. **Workspace 掃描**：自動偵測 `.github/skills/` 中的技能
+2. **Copilot 指引**：`.github/copilot-instructions.md` 檔案參考可用的技能
+3. **Agent 角色**：`.github/agents/` 中的檔案 (例如 `backend.agent.md`) 可以指定要載入哪些技能
 
-### Copilot Configuration Example
+### Copilot 設定範例
 
-In `.github/copilot-instructions.md`:
+在 `.github/copilot-instructions.md` 中：
 
 ```markdown
 ## Available Skills
@@ -54,97 +54,97 @@ For Azure Cosmos DB work, load the `azure-cosmos-db-py` skill.
 For FastAPI endpoints, load the `fastapi-router-py` skill.
 ```
 
-## Progressive Disclosure
+## 漸進式揭露 (Progressive Disclosure)
 
-Skills use a three-tier loading strategy to manage context efficiently:
+技能使用三層載入策略以有效管理 context：
 
-| Tier | Content | When Loaded | Token Cost |
+| 層級 | 內容 | 載入時機 | Token 成本 |
 |------|---------|-------------|------------|
-| **1. Metadata** | `name` + `description` from frontmatter | Startup | ~50-100 per skill |
-| **2. Instructions** | Full `SKILL.md` body | On activation | ~500-2000 |
-| **3. Resources** | Files in `scripts/`, `references/`, `assets/` | On demand | Variable |
+| **1. 中繼資料** | `name` + `description` (來自 frontmatter) | 啟動時 | 每個技能 ~50-100 |
+| **2. 指引** | 完整的 `SKILL.md` 本文 | 啟動 (Activation) 時 | ~500-2000 |
+| **3. 資源** | `scripts/`, `references/`, `assets/` 中的檔案 | 依需求 | 不定 |
 
-### Example: Skill Activation Flow
+### 範例：技能啟動流程
 
 ```
 User: "Create a Cosmos DB service for user data"
 
-Agent thinks:
-  → Scans loaded metadata for relevant skills
-  → Finds: "azure-cosmos-db-py: Build Azure Cosmos DB NoSQL services..."
-  → Activates skill by reading full SKILL.md
-  → Follows instructions to implement the service
+Agent 思考：
+  → 掃描已載入的中繼資料尋找相關技能
+  → 發現："azure-cosmos-db-py: Build Azure Cosmos DB NoSQL services..."
+  → 透過讀取完整的 SKILL.md 啟動技能
+  → 遵循指引實作服務
 ```
 
-## Skill Loading by Agent Type
+## 依據 Agent 類型的技能載入
 
 ### Claude Code / Copilot CLI
 
-Filesystem-based agents load skills via shell commands:
+基於檔案系統的 Agent 透過 shell 指令載入技能：
 
 ```bash
 cat /path/to/skills/azure-cosmos-db-py/SKILL.md
 ```
 
-The skill's `location` field in the available skills prompt tells the agent where to find it.
+可用技能提示中的 `location` 欄位會告訴 Agent 去哪裡找到它。
 
-### Tool-Based Agents
+### 基於工具的 Agent (Tool-Based Agents)
 
-Agents without filesystem access use dedicated tools:
+沒有檔案系統存取權限的 Agent 使用專用工具：
 
 ```python
-# Agent calls a skill-loading tool
+# Agent 呼叫載入技能的工具
 result = load_skill("azure-cosmos-db-py")
 ```
 
-## Selective Loading Best Practice
+## 選擇性載入的最佳實踐
 
-**Never load all skills at once.** This causes context rot:
+**絕不要一次載入所有技能。** 這會導致語境腐爛 (context rot)：
 
-- Diluted attention across unrelated domains
-- Wasted tokens on irrelevant instructions
-- Conflated patterns from different SDKs
+- 注意力分散到不相關的領域
+- 在不相關的指引上浪費 tokens
+- 混淆來自不同 SDK 的模式
 
-**Do this instead:**
+**請改為這樣做：**
 
 ```
 User request: "Add a blob storage endpoint"
 
-Agent should:
-1. Identify task domain: Azure Storage + API endpoint
-2. Load ONLY: azure-storage-blob-py, fastapi-router-py
-3. Ignore: azure-cosmos-db-py, react-flow-node-ts, etc.
+Agent 應該：
+1. 識別任務領域：Azure Storage + API 端點
+2. 僅載入：azure-storage-blob-py, fastapi-router-py
+3. 忽略：azure-cosmos-db-py, react-flow-node-ts 等
 ```
 
-## Adding Skills to Your Project
+## 將技能新增至你的專案
 
-### Via npx (recommended)
+### 透過 npx (推薦)
 
 ```bash
 npx skills add microsoft/agent-skills
-# Select skills from interactive wizard
+# 從互動式精靈中選擇技能
 ```
 
-### Manual Installation
+### 手動安裝
 
 ```bash
-# Copy specific skills
+# 複製特定技能
 cp -r agent-skills/.github/skills/azure-cosmos-db-py your-project/.github/skills/
 
-# Or symlink for multi-project setups
+# 或在多專案設定中使用符號連結 (symlink)
 ln -s /path/to/agent-skills/.github/skills/mcp-builder /path/to/your-project/.github/skills/mcp-builder
 ```
 
-## Skill Naming Convention
+## 技能命名慣例
 
-Skills use language suffixes for automatic categorization:
+技能使用語言後綴進行自動分類：
 
-| Suffix | Language | Example |
+| 後綴 | 語言 | 範例 |
 |--------|----------|---------|
 | `-py` | Python | `azure-cosmos-db-py` |
 | `-dotnet` | .NET/C# | `azure-ai-inference-dotnet` |
 | `-ts` | TypeScript | `azure-ai-agents-ts` |
 | `-java` | Java | `azure-cosmos-java` |
-| (none) | Cross-language | `mcp-builder`, `azd-deployment` |
+| (無) | 跨語言 | `mcp-builder`, `azd-deployment` |
 
-This allows agents to filter skills by the project's technology stack.
+這允許 Agent 根據專案的技術堆疊過濾技能。
