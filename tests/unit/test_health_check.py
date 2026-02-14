@@ -10,7 +10,7 @@ Health Check 端點測試腳本
 """
 
 import asyncio
-import aiohttp
+import httpx
 import json
 import argparse
 from typing import Dict, Optional
@@ -34,20 +34,20 @@ class HealthCheckTester:
         
         url = urljoin(self.base_url, "/health")
         try:
-            async with aiohttp.ClientSession(
-                timeout=aiohttp.ClientTimeout(total=self.timeout)
-            ) as session:
-                async with session.get(url) as response:
-                    status = response.status
-                    data = await response.json()
-                    
-                    result = {
-                        "endpoint": "/health",
-                        "status_code": status,
-                        "success": status in [200, 503],
-                        "response": data,
-                        "timestamp": datetime.now().isoformat()
-                    }
+            async with httpx.AsyncClient(
+                timeout=httpx.Timeout(timeout=float(self.timeout))
+            ) as client:
+                response = await client.get(url)
+                status = response.status_code
+                data = response.json()
+                
+                result = {
+                    "endpoint": "/health",
+                    "status_code": status,
+                    "success": status in [200, 503],
+                    "response": data,
+                    "timestamp": datetime.now().isoformat()
+                }
                     
                     self._print_response(status, data)
                     self.results.append(result)
@@ -84,20 +84,20 @@ class HealthCheckTester:
         
         url = urljoin(self.base_url, "/ready")
         try:
-            async with aiohttp.ClientSession(
-                timeout=aiohttp.ClientTimeout(total=self.timeout)
-            ) as session:
-                async with session.get(url) as response:
-                    status = response.status
-                    data = await response.json()
-                    
-                    result = {
-                        "endpoint": "/ready",
-                        "status_code": status,
-                        "success": status in [200, 503],
-                        "response": data,
-                        "timestamp": datetime.now().isoformat()
-                    }
+            async with httpx.AsyncClient(
+                timeout=httpx.Timeout(timeout=float(self.timeout))
+            ) as client:
+                response = await client.get(url)
+                status = response.status_code
+                data = response.json()
+                
+                result = {
+                    "endpoint": "/ready",
+                    "status_code": status,
+                    "success": status in [200, 503],
+                    "response": data,
+                    "timestamp": datetime.now().isoformat()
+                }
                     
                     self._print_response(status, data)
                     self.results.append(result)
@@ -134,20 +134,20 @@ class HealthCheckTester:
         
         url = self.base_url
         try:
-            async with aiohttp.ClientSession(
-                timeout=aiohttp.ClientTimeout(total=self.timeout)
-            ) as session:
-                async with session.get(url) as response:
-                    status = response.status
-                    data = await response.json()
-                    
-                    result = {
-                        "endpoint": "/",
-                        "status_code": status,
-                        "success": status == 200,
-                        "response": data,
-                        "timestamp": datetime.now().isoformat()
-                    }
+            async with httpx.AsyncClient(
+                timeout=httpx.Timeout(timeout=float(self.timeout))
+            ) as client:
+                response = await client.get(url)
+                status = response.status_code
+                data = response.json()
+                
+                result = {
+                    "endpoint": "/",
+                    "status_code": status,
+                    "success": status == 200,
+                    "response": data,
+                    "timestamp": datetime.now().isoformat()
+                }
                     
                     self._print_response(status, data)
                     self.results.append(result)

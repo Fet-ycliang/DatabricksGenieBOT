@@ -22,6 +22,8 @@ async def handle_special_commands(
     email_sessions: Dict[str, UserSession],
     graph_service=None,
 ) -> bool:
+    if not question:
+        return False
     lowered = question.lower()
 
     if lowered.startswith("/setuser ") and turn_context.activity.channel_id == "emulator":

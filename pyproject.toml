@@ -5,18 +5,13 @@ description = "A Microsoft Teams Bot integrating with Databricks Genie via FastA
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "requests>=2.31.0",
     "python-dotenv>=1.0.0",
-    "pandas>=2.0.0",
-    "aiohttp>=3.8.0",
-    "aiohttp-compress>=0.2.0",
     "psutil>=5.9.0",
     "botbuilder-core>=4.15.0",
     "botbuilder-ai>=4.15.0",
     "botframework-connector>=4.15.0",
     "botbuilder-schema>=4.15.0",
     "botbuilder-dialogs>=4.15.0",
-    "botbuilder-integration-aiohttp>=4.15.0",
     "databricks-sdk>=0.12.0",
     "azure-identity>=1.15.0",
     "tzdata>=2023.3",
@@ -25,11 +20,24 @@ dependencies = [
     "numpy>=1.24.0",
     "fastapi[standard]>=0.112.0",
     "uvicorn>=0.30.0",
+    # Microsoft 365 Agent Framework
+    "msgraph-core>=0.2.0",
+    "pydantic>=2.0.0",
 ]
 
 [tool.uv]
 dev-dependencies = [
     "pytest>=7.0.0",
+]
+index-url = "https://nexus01p.fareastone.com.tw:8081/repository/pypi-proxy/simple"
+extra-index-url = [
+    "https://nexus01p.fareastone.com.tw:8081/repository/pypi-proxy/simple",
+]
+allow-insecure-host = [
+    "pypi.python.org",
+    "pypi.org",
+    "files.pythonhosted.org",
+    "nexus01p.fareastone.com.tw",
 ]
 
 [build-system]

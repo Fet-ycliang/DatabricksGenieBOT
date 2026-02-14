@@ -121,11 +121,8 @@ These guidelines must be followed for all changes in this project.
 
 ## 5. Recommended Directory Structure
 
-To support a scalable FastAPI + Bot Framework architecture, use the following structure:
-
-```text
 .
-├── .antigravity/        # Agent Skills
+├── .agent/              # Agent Skills
 ├── .github/             # CI/CD Workflows
 ├── app/                 # Main Application Package
 │   ├── __init__.py

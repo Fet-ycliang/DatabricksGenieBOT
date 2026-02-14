@@ -1,11 +1,14 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
+import logging
+import json
 
 from app.services.genie import GenieService
 from app.core.config import DefaultConfig
 from app.models.user_session import UserSession
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 config = DefaultConfig()
 
@@ -16,7 +19,7 @@ def get_genie_service():
         yield service
     finally:
         # In a real app we might want to keep the session open or close it
-        # depending on how GenieService manages aiohttp session
+        # depending on how GenieService manages httpx session
         pass 
         # await service.close() # Logic is in on_shutdown
 
@@ -47,6 +50,21 @@ async def chat(request: ChatRequest, service: GenieService = Depends(get_genie_s
             user_session=user_session,
             conversation_id=request.conversation_id
         )
+        
+        # 日誌記錄回應信息
+        try:
+            response_data = json.loads(response_payload)
+            logger.info(f"✅ Genie API 回應成功 - 問題: {request.query[:60]}...")
+            if "error" in response_data:
+                logger.warning(f"⚠️ Genie 返回錯誤: {response_data['error'][:100]}")
+            elif "message" in response_data:
+                logger.info(f"💬 返回文字回覆 (長度: {len(response_data.get('message', ''))})")
+            elif "data" in response_data:
+                data_count = len(response_data.get("data", {}).get("data_array", []))
+                logger.info(f"📊 返回資料結果 (筆數: {data_count})")
+        except:
+            logger.debug(f"無法解析回應內容")
+        
         return {
             "conversation_id": conversation_id,
             "message_id": message_id,
@@ -55,4 +73,5 @@ async def chat(request: ChatRequest, service: GenieService = Depends(get_genie_s
             # but for now returning as is or parsed
         }
     except Exception as e:
+        logger.error(f"❌ Genie API 調用失敗 - 問題: {request.query[:60]}... - 錯誤: {str(e)[:200]}")
         raise HTTPException(status_code=500, detail=str(e))

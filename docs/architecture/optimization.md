@@ -71,27 +71,28 @@ class GenieService:
 @asynccontextmanager
 async def get_http_session(self):
     """重用 HTTP Session 減少連接開銷"""
-    if not self._http_session or self._http_session.closed:
-        # ✅ 添加超時配置
-        timeout = aiohttp.ClientTimeout(
-            total=30,      # 總超時：30 秒
-            connect=5,     # 連接超時：5 秒
-            sock_read=10,  # 讀取超時：10 秒
+    if not self._http_session or self._http_session.is_closed:
+        # ✅ 添加超時配置（httpx）
+        timeout = httpx.Timeout(
+            timeout=30.0,      # 總超時：30 秒
+            connect=5.0,       # 連接超時：5 秒
+            read=10.0,         # 讀取超時：10 秒
+            write=10.0,        # 寫入超時：10 秒
         )
-        self._http_session = aiohttp.ClientSession(
+        limits = httpx.Limits(
+            max_connections=100,
+            max_keepalive_connections=30,
+        )
+        self._http_session = httpx.AsyncClient(
             timeout=timeout,
-            connector=aiohttp.TCPConnector(
-                limit=100,
-                limit_per_host=30,
-                ttl_dns_cache=300  # DNS 快取 5 分鐘
-            )
+            limits=limits,
         )
     try:
         yield self._http_session
     except asyncio.TimeoutError as e:
         logger.error(f"❌ HTTP 請求超時: {e}")
         if self._http_session:
-            await self._http_session.close()
+            await self._http_session.aclose()
         self._http_session = None
         raise
 ```
@@ -113,21 +114,18 @@ async def get_http_session(self):
 **檔案:** `pyproject.toml`
 
 ```
-# 添加以下行
-aiohttp-compress>=0.2.0
+# FastAPI 已內建 GZipMiddleware 支援，無需額外依賴
+# 僅需在 pyproject.toml 中確保有 fastapi 依賴
 ```
 
 **檔案:** `app/main.py`
 
 ```python
-# 1. 在導入中添加
-from aiohttp_compress import compress_middleware
+from fastapi import FastAPI
+from fastapi.middleware.gzip import GZipMiddleware
 
-# 2. 在 init_func 中修改
-def create_app():
-    APP = FastAPI()
-    APP.add_middleware(GZipMiddleware)  # 自動壓縮
-    # ... 其他代碼 ...
+app = FastAPI()
+app.add_middleware(GZipMiddleware, minimum_size=1000)  # 自動壓縮 >1KB 的響應
 ```
 
 **預期效果：**
@@ -154,9 +152,11 @@ psutil>=5.9.0
 # 1. 在頂部添加導入
 from datetime import datetime, timezone
 import psutil
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 
-# 2. 在 on_cleanup 之後添加新函數
-async def get_performance_metrics(request: web.Request) -> web.Response:
+# 2. 添加新函數
+async def get_performance_metrics(request: Request) -> JSONResponse:
     """獲取性能指標"""
     try:
         stats = GENIE_SERVICE.metrics.get_stats()
@@ -165,7 +165,7 @@ async def get_performance_metrics(request: web.Request) -> web.Response:
         process = psutil.Process()
         memory_info = process.memory_info()
 
-        return web.json_response({
+        return JSONResponse({
             'status': 'ok',
             'timestamp': datetime.now(timezone.utc).isoformat(),
             'performance': stats,
@@ -177,20 +177,32 @@ async def get_performance_metrics(request: web.Request) -> web.Response:
         })
     except Exception as e:
         logger.error(f"獲取性能指標時出錯: {e}")
-        return web.json_response({'error': str(e)}, status=500)
+        return JSONResponse({'error': str(e)}, status_code=500)
 
-# 3. 在 init_func 中添加路由
-def init_func(argv):
-    APP = web.Application(middlewares=[aiohttp_error_middleware, compress_middleware])
-    APP.on_startup.append(on_startup)
-    APP.on_cleanup.append(on_cleanup)
+# 3. 在 FastAPI 應用中添加路由
+app = FastAPI()
 
-    # ✅ 添加新路由
-    APP.router.add_get("/api/metrics", get_performance_metrics)
+@app.on_event("startup")
+async def startup():
+    await on_startup()
 
-    APP.router.add_get("/api/health", health_check)
-    APP.router.add_post("/api/messages", messages)
-    return APP
+@app.on_event("shutdown")
+async def shutdown():
+    await on_cleanup()
+
+# ✅ 添加新路由
+@app.get("/api/metrics")
+async def metrics():
+    return await get_performance_metrics(Request)
+
+@app.get("/api/health")
+async def health():
+    return await health_check()
+
+@app.post("/api/messages")
+async def messages(request: Request):
+    # 消息處理邏輯
+    pass
 ```
 
 **預期效果：**
@@ -637,7 +649,8 @@ python performance_benchmark.py
 
 ## 📚 參考資源
 
-- [aiohttp 性能調優](https://docs.aiohttp.org/en/stable/client_advanced.html)
+- [httpx 性能調優](https://www.python-httpx.org/)
+- [FastAPI 最佳實踐](https://fastapi.tiangolo.com/deployment/concepts/)
 - [Python 性能最佳實踐](https://realpython.com/python-performance/)
 - [非同步 Python 模式](https://docs.python.org/3/library/asyncio.html)
 - [Databricks SDK 性能](https://docs.databricks.com/en/sdk-guide/index.html)

@@ -54,3 +54,7 @@ class DefaultConfig:
     # Feedback settings
     ENABLE_FEEDBACK_CARDS = os.getenv("ENABLE_FEEDBACK_CARDS", "True").lower() == "true"
     ENABLE_GENIE_FEEDBACK_API = os.getenv("ENABLE_GENIE_FEEDBACK_API", "True").lower() == "true"
+    
+    # Logging configuration
+    VERBOSE_LOGGING = os.getenv("VERBOSE_LOGGING", "False").lower() == "true"
+    LOG_FILE = os.getenv("LOG_FILE", "bot_debug.log")

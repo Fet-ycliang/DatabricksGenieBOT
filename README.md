@@ -19,7 +19,7 @@
 - 具有適當錯誤處理和使用者通知的即時回饋收集
 - **🎨 圖表視覺化**：自動生成圖表圖片（長條圖、圓餅圖、折線圖）並顯示在 Teams 中
   - 智能判斷數據類型並選擇最適合的圖表
-  - 使用 Plotly 生成現代化、美觀的圖表圖片
+  - 使用 **Matplotlib 和 Seaborn** 生成現代化、美觀的圖表圖片
   - 支持中文標籤和標題
   - 通過 Adaptive Card 無縫顯示
   - 詳細說明請參閱 [CHART_FEATURE_GUIDE.md](CHART_FEATURE_GUIDE.md)
@@ -67,14 +67,17 @@
 
 - Python
 - Bot Framework SDK
-- 用於非同步 HTTP 請求的 aiohttp
+- **Microsoft 365 Agent Framework SDK** (New!)
+- 用於非同步 HTTP 請求的 httpx
 - Databricks Genie API（公開預覽版）
 
 系統的主要組件包括：
 
+- `M365AgentFramework`：統合管理所有 Skills (Mail, Calendar, OneDrive, Teams) 的核心控制器
+- `AuthenticationSkill`：處理 Microsoft Teams SSO 與 Token 管理
 - `ask_genie` 函數，處理與 Genie API 的通訊
 - `MyBot` 類別，處理傳入訊息並管理使用者對話
-- 一個 aiohttp Web 應用程式，作為機器人訊息的進入點
+- 一個 FastAPI Web 應用程式，作為機器人訊息的進入點
 - **新功能**：整合回饋系統，使用發送訊息回饋端點將使用者回饋直接發送到 Databricks Genie API
 
 ## 工作階段管理架構
@@ -144,7 +147,7 @@
 0. Python 版本 3.11+
 1. 安裝 `uv` (推薦) 並執行 `uv sync` 安裝依賴
 2. 設定必要的環境變數（請參閱下面的環境變數部分）
-3. 執行 `uv run fastapi dev app/main.py` 以啟動機器人
+3. 執行 `uv run uvicorn app.main:app --port 8000` 以啟動機器人
 4. 透過 Azure Bot Framework 呼叫機器人端點 (port 8000)
 
 ### 🔍 環境診斷

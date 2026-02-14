@@ -11,8 +11,8 @@ https://docs.microsoft.com/azure/architecture/patterns/health-endpoint-monitorin
 
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional
-from aiohttp import web
-from aiohttp.web import Request, json_response
+from fastapi import Request
+from fastapi.responses import JSONResponse
 
 from app.services.genie import GenieService
 from app.services.graph import GraphService
@@ -250,29 +250,29 @@ def create_ready_check_handler(
             logger.error(f"Ready check failed with exception: {str(e)}")
             response = ReadyCheckResponse(ready=False)
             response.error = str(e)
-            return json_response(data=response.to_dict(), status=503)
+            return JSONResponse(response.to_dict(), status_code=503)
     
     return ready_check
 
 
-def register_health_check_routes(app: web.Application, handlers: Dict[str, Any]):
+def register_health_check_routes(app, handlers: Dict[str, Any]):
     """
     向應用程式註冊健康檢查路由
     
     參數：
-        app: aiohttp 應用程式實例
+        app: FastAPI 應用程式實例
         handlers: 包含 'health_check' 和 'ready_check' 處理程式的字典
     """
     if "health_check" in handlers:
-        app.router.add_get("/health", handlers["health_check"])
+        app.add_route("/health", handlers["health_check"], methods=["GET"])
         logger.info("Registered health check route: GET /health")
     
     if "ready_check" in handlers:
-        app.router.add_get("/ready", handlers["ready_check"])
+        app.add_route("/ready", handlers["ready_check"], methods=["GET"])
         logger.info("Registered ready check route: GET /ready")
     
     # 也可以添加到根路徑作為心跳檢查
-    async def heartbeat(req: Request) -> web.Response:
-        return json_response({"status": "ok"})
+    async def heartbeat(req: Request) -> JSONResponse:
+        return JSONResponse({"status": "ok"})
     
-    app.router.add_get("/", heartbeat)
+    app.add_route("/", heartbeat, methods=["GET"])

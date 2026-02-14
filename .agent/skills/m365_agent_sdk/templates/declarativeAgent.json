@@ -1,0 +1,26 @@
+{
+    "$schema": "https://developer.microsoft.com/json-schemas/copilot/declarative-agent/v1.0/schema.json",
+    "version": "v1.0",
+    "name": "My Copilot Agent",
+    "description": "An AI agent that connects to enterprise data.",
+    "instructions": "You are a helpful assistant for Microsoft 365. Always respond politely and concisely.",
+    "conversation_starters": [
+        {
+            "text": "Summarize my emails"
+        },
+        {
+            "text": "Find my meeting notes"
+        }
+    ],
+    "capabilities": [
+        {
+            "name": "WebSearch"
+        },
+        {
+            "name": "OneDriveAndSharePoint"
+        },
+        {
+            "name": "GraphConnectors"
+        }
+    ]
+}
