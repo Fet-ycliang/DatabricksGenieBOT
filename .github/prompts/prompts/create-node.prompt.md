@@ -3,22 +3,22 @@ mode: ask
 description: Create a new React Flow node component with proper typing, styling, and store integration
 ---
 
-# Create New Node Type
+# 建立新節點類型 (Create New Node Type)
 
-Create a new node type for the CoreAI DIY canvas following established patterns.
+遵守既定模式為 CoreAI DIY 畫布建立一個新節點類型。
 
-## Variables
+## 變數
 
-- `NODE_TYPE`: The node type identifier (e.g., `my-node`)
-- `NODE_NAME`: The display name (e.g., `MyNode`)
-- `NODE_DESCRIPTION`: Brief description of the node's purpose
-- `NODE_PROPERTIES`: Key properties the node needs
+- `NODE_TYPE`: 節點類型識別符 (例如 `my-node`)
+- `NODE_NAME`: 顯示名稱 (例如 `MyNode`)
+- `NODE_DESCRIPTION`: 節點用途的簡短描述
+- `NODE_PROPERTIES`: 節點所需的關鍵屬性
 
-## Steps
+## 步驟
 
-### 1. Define Types
+### 1. 定義型別
 
-Add to `src/frontend/src/types/index.ts`:
+新增至 `src/frontend/src/types/index.ts`：
 
 ```typescript
 export interface ${NODE_NAME}Data extends Record<string, unknown> {
@@ -29,11 +29,11 @@ export interface ${NODE_NAME}Data extends Record<string, unknown> {
 export type ${NODE_NAME} = Node<${NODE_NAME}Data, '${NODE_TYPE}'>;
 ```
 
-Update the `AppNode` union to include `${NODE_NAME}`.
+更新 `AppNode` 聯集 (union) 以包含 `${NODE_NAME}`。
 
-### 2. Create Component
+### 2. 建立元件
 
-Create `src/frontend/src/components/nodes/${NODE_NAME}.tsx`:
+建立 `src/frontend/src/components/nodes/${NODE_NAME}.tsx`：
 
 ```typescript
 import { memo, useCallback } from 'react';
@@ -67,26 +67,26 @@ export const ${NODE_NAME} = memo(function ${NODE_NAME}({
 });
 ```
 
-### 3. Export from Barrel
+### 3. 從 Barrel 匯出
 
-Add to `src/frontend/src/components/nodes/index.ts`:
+新增至 `src/frontend/src/components/nodes/index.ts`：
 
 ```typescript
 export { ${NODE_NAME} } from './${NODE_NAME}';
 ```
 
-### 4. Add Default Data
+### 4. 新增預設資料
 
-In `src/frontend/src/store/app-store.ts`, add to `getDefaultNodeData`:
+在 `src/frontend/src/store/app-store.ts` 中，新增至 `getDefaultNodeData`：
 
 ```typescript
 case '${NODE_TYPE}':
   return { title: 'New ${NODE_NAME}', ...data } as NodeDataMap[T];
 ```
 
-### 5. Register Node Type
+### 5. 註冊節點類型
 
-In canvas page, add to `nodeTypes`:
+在畫布頁面中，新增至 `nodeTypes`：
 
 ```typescript
 const nodeTypes: NodeTypes = {
@@ -95,17 +95,17 @@ const nodeTypes: NodeTypes = {
 };
 ```
 
-### 6. Add to Menus
+### 6. 新增至選單
 
-Add entry to AddBlockMenu, ConnectMenu, and NodeContextMenu.
+新增項目至 AddBlockMenu, ConnectMenu, 和 NodeContextMenu。
 
-## Checklist
+## 檢查清單
 
-- [ ] Type definition in `types/index.ts`
-- [ ] Component in `components/nodes/`
+- [ ] `types/index.ts` 中的型別定義
+- [ ] `components/nodes/` 中的元件
 - [ ] Barrel export
-- [ ] Default data in store
-- [ ] Registered in nodeTypes
-- [ ] Added to menus
-- [ ] Keyboard shortcut (optional)
-- [ ] Tests added
+- [ ] store 中的預設資料
+- [ ] 已註冊於 nodeTypes
+- [ ] 已新增至選單
+- [ ] 鍵盤快速鍵 (選填)
+- [ ] 已新增測試

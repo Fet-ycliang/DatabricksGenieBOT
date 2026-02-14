@@ -44,53 +44,72 @@ def generate_chart_image(chart_info: dict) -> str:
         
         # 設定樣式
         sns.set_style("whitegrid")
-        plt.figure(figsize=(12, 7), dpi=100)
         
         # 根據圖表類型繪製
         if chart_type == 'pie':
-            # 圓餅圖 - 專業配色
+            # 圓餅圖 - 使用較大的圖表和邊距
+            fig, ax = plt.subplots(figsize=(14, 9), dpi=100)
             colors = sns.color_palette("Set2", len(categories))
-            plt.pie(values, labels=categories, autopct='%1.1f%%', colors=colors, startangle=90, 
-                    textprops={'fontsize': 11, 'fontweight': 'bold'}, wedgeprops={'edgecolor': 'white', 'linewidth': 2})
-            plt.title(f'{category_col} vs {value_col}', fontsize=16, fontweight='bold', pad=20)
-        
+            
+            # 繪製圓餅圖，將標籤放在圖表外側
+            wedges, texts, autotexts = ax.pie(
+                values, 
+                labels=None,  # 先不用 pie 內置標籤
+                autopct='%1.1f%%', 
+                colors=colors, 
+                startangle=90,
+                textprops={'fontsize': 13, 'fontweight': 'bold'},
+                wedgeprops={'edgecolor': 'white', 'linewidth': 2},
+                pctdistance=0.85
+            )
+            
+            # 手動添加標籤到圖例
+            ax.legend(categories, loc='center left', bbox_to_anchor=(1, 0, 0.5, 1), fontsize=12)
+            ax.set_title(f'{category_col} vs {value_col}', fontsize=14, fontweight='bold', pad=20)
+            
         elif chart_type == 'line':
+            fig = plt.figure(figsize=(14, 8), dpi=100)
             # 折線圖 - 專業藍色
             plt.plot(categories, values, marker='o', linewidth=3, markersize=10, color='#1f77b4', markerfacecolor='#1f77b4', markeredgecolor='white', markeredgewidth=2)
             plt.fill_between(range(len(categories)), values, alpha=0.25, color='#1f77b4')
             # 在數據點上標上數值
             for i, (cat, val) in enumerate(zip(categories, values)):
-                plt.text(i, val, f'{val:,.0f}', ha='center', va='bottom', fontsize=16, fontweight='bold', color='#1f77b4')
-            plt.xlabel(category_col, fontsize=24, fontweight='bold', color='#333333')
-            plt.ylabel(value_col, fontsize=24, fontweight='bold', color='#333333')
-            plt.title(f'{category_col} vs {value_col}', fontsize=16, fontweight='bold', pad=20)
-            plt.xticks(rotation=45, ha='right', fontsize=14, color='#555555')
-            plt.yticks(fontsize=14, color='#555555')
+                plt.text(i, val, f'{val:,.0f}', ha='center', va='bottom', fontsize=12, fontweight='bold', color='#1f77b4')
+            plt.xlabel(category_col, fontsize=14, fontweight='bold', color='#333333')
+            plt.ylabel(value_col, fontsize=14, fontweight='bold', color='#333333')
+            plt.title(f'{category_col} vs {value_col}', fontsize=14, fontweight='bold', pad=20)
+            plt.xticks(rotation=45, ha='right', fontsize=11, color='#555555')
+            plt.yticks(fontsize=11, color='#555555')
             plt.grid(True, alpha=0.2, linestyle='--', color='#cccccc')
         
         else:  # bar（預設長條圖）
+            fig = plt.figure(figsize=(14, 8), dpi=100)
             # 長條圖 - 專業漸層配色
             colors = sns.color_palette("husl", len(categories))
-            ax = sns.barplot(x=categories, y=values, palette=colors, width=0.65, edgecolor='white', linewidth=1.5)
+            ax = plt.gca()
+            bars = ax.bar(range(len(categories)), values, color=colors, width=0.7, edgecolor='white', linewidth=1.5)
+            
             # 在柱狀圖頂部標上數值
             for i, (cat, val) in enumerate(zip(categories, values)):
-                ax.text(i, val, f'{val:,.0f}', ha='center', va='bottom', fontsize=16, fontweight='bold', color='#333333')
-            plt.xlabel(category_col, fontsize=24, fontweight='bold', color='#333333')
-            plt.ylabel(value_col, fontsize=24, fontweight='bold', color='#333333')
-            plt.title(f'{category_col} vs {value_col}', fontsize=16, fontweight='bold', pad=20)
-            plt.xticks(rotation=45, ha='right', fontsize=14, color='#555555')
-            plt.yticks(fontsize=14, color='#555555')
+                ax.text(i, val, f'{val:,.0f}', ha='center', va='bottom', fontsize=12, fontweight='bold', color='#333333')
+            
+            ax.set_xticks(range(len(categories)))
+            ax.set_xticklabels(categories, rotation=45, ha='right', fontsize=11, color='#555555')
+            ax.set_yticks(fontsize=11, color='#555555')
+            plt.xlabel(category_col, fontsize=14, fontweight='bold', color='#333333')
+            plt.ylabel(value_col, fontsize=14, fontweight='bold', color='#333333')
+            plt.title(f'{category_col} vs {value_col}', fontsize=14, fontweight='bold', pad=20)
             ax.spines['top'].set_visible(False)
             ax.spines['right'].set_visible(False)
             ax.spines['left'].set_color('#cccccc')
             ax.spines['bottom'].set_color('#cccccc')
         
-        # 調整布局
-        plt.tight_layout()
+        # 調整布局以避免標籤被切掉
+        plt.subplots_adjust(left=0.1, right=0.9, top=0.92, bottom=0.15)
         
         # 轉換為 PNG 並編碼為 base64
         buffer = io.BytesIO()
-        plt.savefig(buffer, format='png', dpi=100, bbox_inches='tight')
+        plt.savefig(buffer, format='png', dpi=100, bbox_inches='tight', pad_inches=0.5)
         buffer.seek(0)
         png_bytes = buffer.getvalue()
         plt.close()
@@ -163,20 +182,37 @@ def create_chart_card_with_image(chart_info: dict) -> dict:
 
 
 def create_suggested_questions_card(suggested_questions: list) -> dict:
-    """創建包含建議問題的 Adaptive Card"""
+    """創建包含建議問題的 Adaptive Card 附件"""
     if not suggested_questions or len(suggested_questions) == 0:
         return None
-    
+
+    normalized_questions = []
+    for item in suggested_questions:
+        if isinstance(item, str):
+            question = item.strip()
+        elif isinstance(item, dict):
+            question = (item.get("question") or item.get("text") or "").strip()
+        else:
+            question = str(item).strip()
+        if question:
+            normalized_questions.append(question)
+
+    if not normalized_questions:
+        return None
+
     actions = [
         {
             "type": "Action.Submit",
             "title": f"❓ {question[:35]}{'...' if len(question) > 35 else ''}",
-            "data": {"action": "ask_suggested_question", "question": question}
+            "data": {
+                "action": "ask_suggested_question",
+                "question": question
+            }
         }
-        for question in suggested_questions[:3]
+        for question in normalized_questions[:3]
     ]
-    
-    return {
+
+    card_content = {
         "type": "AdaptiveCard",
         "version": "1.5",
         "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
@@ -184,21 +220,44 @@ def create_suggested_questions_card(suggested_questions: list) -> dict:
             {
                 "type": "Container",
                 "style": "emphasis",
-                "items": [{
-                    "type": "ColumnSet",
-                    "columns": [
-                        {"type": "Column", "width": "auto", "items": [{"type": "TextBlock", "text": "���", "size": "Large"}]},
-                        {
-                            "type": "Column",
-                            "width": "stretch",
-                            "items": [
-                                {"type": "TextBlock", "text": "建議問題", "weight": "Bolder", "size": "Medium", "color": "Accent"},
-                                {"type": "TextBlock", "text": "點擊下方按鈕繼續詢問", "isSubtle": True, "spacing": "None", "size": "Small"}
-                            ]
-                        }
-                    ]
-                }]
+                "items": [
+                    {
+                        "type": "ColumnSet",
+                        "columns": [
+                            {
+                                "type": "Column",
+                                "width": "auto",
+                                "items": [{"type": "TextBlock", "text": "💡", "size": "Large"}],
+                            },
+                            {
+                                "type": "Column",
+                                "width": "stretch",
+                                "items": [
+                                    {
+                                        "type": "TextBlock",
+                                        "text": "建議問題",
+                                        "weight": "Bolder",
+                                        "size": "Medium",
+                                        "color": "Accent",
+                                    },
+                                    {
+                                        "type": "TextBlock",
+                                        "text": "點擊下方按鈕繼續詢問",
+                                        "isSubtle": True,
+                                        "spacing": "None",
+                                        "size": "Small",
+                                    },
+                                ],
+                            },
+                        ],
+                    }
+                ],
             }
         ],
-        "actions": actions
+        "actions": actions,
+    }
+
+    return {
+        "contentType": "application/vnd.microsoft.card.adaptive",
+        "content": card_content,
     }

@@ -56,7 +56,7 @@ class Diagnostics:
         print("\n📌 檢查必要的包...")
         
         required_packages = {
-            'aiohttp': '>=3.8',
+            'httpx': '>=0.27',
             'botbuilder-core': '>=4.17',
             'matplotlib': '>=3.7.0',
             'seaborn': '>=0.12.0',

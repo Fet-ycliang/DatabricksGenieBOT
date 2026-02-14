@@ -1,17 +1,16 @@
+import sys
+import traceback
+from datetime import datetime
 from botbuilder.core import BotFrameworkAdapterSettings, BotFrameworkAdapter
-from botbuilder.integration.aiohttp import CloudAdapter, ConfigurationBotFrameworkAuthentication
+from botbuilder.schema import Activity, ActivityTypes
 from app.core.config import DefaultConfig
 
 CONFIG = DefaultConfig()
 
 # 用於使用 Bot Framework Emulator 進行本地開發，使用 BotFrameworkAdapter
-if CONFIG.APP_ID and CONFIG.APP_PASSWORD:
-    # 生產環境：使用 CloudAdapter
-    ADAPTER = CloudAdapter(ConfigurationBotFrameworkAuthentication(CONFIG))
-else:
-    # 本地測試：使用帶有空憑證的 BotFrameworkAdapter
-    SETTINGS = BotFrameworkAdapterSettings("", "")
-    ADAPTER = BotFrameworkAdapter(SETTINGS)
+# 生產環境或具有完整憑證時使用 BotFrameworkAdapter
+SETTINGS = BotFrameworkAdapterSettings(CONFIG.APP_ID or "", CONFIG.APP_PASSWORD or "")
+ADAPTER = BotFrameworkAdapter(SETTINGS)
 
 async def on_error(context, error):
     # This check writes out errors to console log .vs. app insights.
@@ -36,10 +35,5 @@ async def on_error(context, error):
         )
         # Send a trace activity, which will be displayed in Bot Framework Emulator
         await context.send_activity(trace_activity)
-
-import sys
-import traceback
-from datetime import datetime
-from botbuilder.schema import Activity, ActivityTypes
 
 ADAPTER.on_turn_error = on_error

@@ -1,165 +1,165 @@
-# Workflow Patterns: Combining Skills and Prompts
+# 工作流程模式：結合技能與提示詞
 
-How to compose skills with prompts for multi-step workflows.
+如何將技能與提示詞組合成多步驟工作流程。
 
-## Skills vs Prompts
+## 技能 vs 提示詞 (Skills vs Prompts)
 
-| Component | Purpose | Location | When Used |
+| 元件 | 用途 | 位置 | 何時使用 |
 |-----------|---------|----------|-----------|
-| **Skills** | Domain expertise, SDK patterns, coding standards | `.github/skills/` | Task matches skill description |
-| **Prompts** | Reusable templates for specific actions | `.github/prompts/` | User invokes explicitly or agent selects |
+| **技能 (Skills)** | 領域專業知識、SDK 模式、編碼標準 | `.github/skills/` | 任務符合技能描述時 |
+| **提示詞 (Prompts)** | 特定動作的可重複使用範本 | `.github/prompts/` | 使用者明確呼叫或 Agent 選擇時 |
 
-Skills provide **knowledge**. Prompts provide **structure**.
+技能提供 **知識**。提示詞提供 **結構**。
 
-## Composing Skills + Prompts
+## 組合技能 + 提示詞
 
-### Example 1: Adding a New API Endpoint
+### 範例 1：新增 API 端點
 
-**Task**: "Add a PUT endpoint for updating user profiles"
+**任務**："新增用於更新使用者設定檔的 PUT 端點"
 
-**Components needed**:
-- Skill: `fastapi-router-py` — FastAPI patterns, response models, auth
-- Skill: `pydantic-models-py` — Request/response schema patterns
-- Prompt: `add-endpoint.prompt.md` — Step-by-step endpoint creation template
+**所需元件**：
+- 技能：`fastapi-router-py` — FastAPI 模式、回應模型、驗證
+- 技能：`pydantic-models-py` — 請求/回應架構模式
+- 提示詞：`add-endpoint.prompt.md` — 逐步端點建立範本
 
-**Workflow**:
-
-```
-1. Agent loads fastapi-router-py skill
-   → Learns: Router patterns, dependency injection, response models
-   
-2. Agent loads pydantic-models-py skill
-   → Learns: Base/Create/Update/Response model pattern
-   
-3. Agent uses add-endpoint.prompt.md structure:
-   → Step 1: Define Pydantic models (UserUpdate, UserResponse)
-   → Step 2: Create router with PUT handler
-   → Step 3: Add authentication dependency
-   → Step 4: Write tests
-```
-
-### Example 2: Building a Data Service with Storage
-
-**Task**: "Create a document service backed by Cosmos DB"
-
-**Components needed**:
-- Skill: `azure-cosmos-db-py` — Cosmos DB service patterns
-- Skill: `azure-identity-py` — Authentication with DefaultAzureCredential
-- Skill: `pydantic-models-py` — Model definitions
-
-**Workflow**:
+**工作流程**：
 
 ```
-1. Agent loads azure-identity-py skill
-   → Establishes: Use DefaultAzureCredential, never hardcode credentials
+1. Agent 載入 fastapi-router-py 技能
+   → 學習：Router 模式、依賴注入、回應模型
    
-2. Agent loads azure-cosmos-db-py skill
-   → Learns: Service layer pattern, partition key strategy, parameterized queries
+2. Agent 載入 pydantic-models-py 技能
+   → 學習：基底/建立/更新/回應模型模式
    
-3. Agent loads pydantic-models-py skill
-   → Learns: Model variant pattern (Base, Create, Update, Response, InDB)
-   
-4. Agent implements:
-   → DocumentBase, DocumentCreate, DocumentResponse models
-   → DocumentService class with CRUD operations
-   → Proper error handling and logging
+3. Agent 使用 add-endpoint.prompt.md 結構：
+   → 步驟 1：定義 Pydantic 模型 (UserUpdate, UserResponse)
+   → 步驟 2：建立帶有 PUT 處理程序的 Router
+   → 步驟 3：新增身份驗證依賴項
+   → 步驟 4：撰寫測試
 ```
 
-### Example 3: Frontend Component with State
+### 範例 2：建置帶有儲存功能的資料服務
 
-**Task**: "Create a workflow editor with draggable nodes"
+**任務**："建立由 Cosmos DB 支援的文件服務"
 
-**Components needed**:
-- Skill: `react-flow-node-ts` — Custom React Flow nodes
-- Skill: `zustand-store-ts` — State management
-- Prompt: `create-node.prompt.md` — Node component template
-- Prompt: `create-store.prompt.md` — Store creation template
+**所需元件**：
+- 技能：`azure-cosmos-db-py` — Cosmos DB 服務模式
+- 技能：`azure-identity-py` — 使用 DefaultAzureCredential 的身份驗證
+- 技能：`pydantic-models-py` — 模型定義
 
-**Workflow**:
+**工作流程**：
 
 ```
-1. Agent uses create-store.prompt.md with zustand-store-ts skill
-   → Creates: workflowStore with nodes, edges, actions
+1. Agent 載入 azure-identity-py 技能
+   → 建立：使用 DefaultAzureCredential，絕不硬編碼憑證
    
-2. Agent uses create-node.prompt.md with react-flow-node-ts skill
-   → Creates: Custom node components with handles, TypeScript types
+2. Agent 載入 azure-cosmos-db-py 技能
+   → 學習：服務層模式、分割區索引鍵策略、參數化查詢
    
-3. Agent integrates components
-   → Connects store to React Flow canvas
-   → Adds drag-drop functionality
+3. Agent 載入 pydantic-models-py 技能
+   → 學習：模型變體模式 (Base, Create, Update, Response, InDB)
+   
+4. Agent 實作：
+   → DocumentBase, DocumentCreate, DocumentResponse 模型
+   → 帶有 CRUD 操作的 DocumentService 類別
+   → 適當的錯誤處理和日誌記錄
 ```
 
-## Multi-Step Workflow Template
+### 範例 3：帶有狀態的前端元件
 
-For complex tasks, structure the workflow explicitly:
+**任務**："建立帶有可拖曳節點的工作流程編輯器"
+
+**所需元件**：
+- 技能：`react-flow-node-ts` — 自訂 React Flow 節點
+- 技能：`zustand-store-ts` — 狀態管理
+- 提示詞：`create-node.prompt.md` — 節點元件範本
+- 提示詞：`create-store.prompt.md` — Store 建立範本
+
+**工作流程**：
+
+```
+1. Agent 使用 create-store.prompt.md 搭配 zustand-store-ts 技能
+   → 建立：帶有節點、邊緣、動作的 workflowStore
+   
+2. Agent 使用 create-node.prompt.md 搭配 react-flow-node-ts 技能
+   → 建立：帶有 handles、TypeScript 型別的自訂節點元件
+   
+3. Agent 整合元件
+   → 將 store 連接至 React Flow 畫布
+   → 新增拖放功能
+```
+
+## 多步驟工作流程範本
+
+對於複雜任務，明確建構工作流程：
 
 ```markdown
-## Task: [Description]
+## Task: [描述]
 
-### Step 1: [Setup]
+### Step 1: [設定]
 - Load skills: [skill-1], [skill-2]
-- Verify: [check]
+- Verify: [檢查]
 
-### Step 2: [Implementation]
+### Step 2: [實作]
 - Use prompt: [prompt-name]
 - Apply patterns from: [skill-name]
-- Verify: [check]
+- Verify: [檢查]
 
-### Step 3: [Integration]
+### Step 3: [整合]
 - Connect components
-- Verify: [check]
+- Verify: [檢查]
 
-### Step 4: [Testing]
+### Step 4: [測試]
 - Write tests following TDD pattern
 - Verify: All tests pass
 ```
 
-## Prompt Templates in This Repository
+## 此儲存庫中的提示詞範本
 
-| Prompt | Purpose | Combines Well With |
+| 提示詞 | 用途 | 適合搭配 |
 |--------|---------|-------------------|
-| `add-endpoint.prompt.md` | Create REST API endpoints | `fastapi-router-py`, `pydantic-models-py` |
-| `create-store.prompt.md` | Create Zustand stores | `zustand-store-ts` |
-| `create-node.prompt.md` | Create React Flow nodes | `react-flow-node-ts` |
-| `code-review.prompt.md` | Review code changes | Any skill for domain context |
+| `add-endpoint.prompt.md` | 建立 REST API 端點 | `fastapi-router-py`, `pydantic-models-py` |
+| `create-store.prompt.md` | 建立 Zustand stores | `zustand-store-ts` |
+| `create-node.prompt.md` | 建立 React Flow 節點 | `react-flow-node-ts` |
+| `code-review.prompt.md` | 審查程式碼變更 | 任何領域 context 的技能 |
 
-## Best Practices
+## 最佳實踐
 
-### 1. Load Skills Before Prompts
+### 1. 在提示詞之前載入技能
 
-Skills establish context and patterns. Prompts structure the execution.
-
-```
-CORRECT:
-1. Load azure-cosmos-db-py (establishes patterns)
-2. Apply add-endpoint.prompt.md (structures implementation)
-
-WRONG:
-1. Apply add-endpoint.prompt.md (no domain context)
-2. Load azure-cosmos-db-py (too late, patterns not applied)
-```
-
-### 2. Limit Active Skills
-
-Keep 2-3 relevant skills active at once. More causes context dilution.
+技能建立 context 和模式。提示詞建構執行。
 
 ```
-GOOD: fastapi-router-py + pydantic-models-py + azure-cosmos-db-py
-BAD:  Loading all 127 skills "just in case"
+正確：
+1. 載入 azure-cosmos-db-py (建立模式)
+2. 應用 add-endpoint.prompt.md (建構實作)
+
+錯誤：
+1. 應用 add-endpoint.prompt.md (無領域 context)
+2. 載入 azure-cosmos-db-py (太遲了，未應用模式)
 ```
 
-### 3. Chain Skills for Complex Domains
+### 2. 限制活躍的技能
 
-When a task spans multiple domains, chain skills in logical order:
+同時保持 2-3 個相關技能活躍。更多會導致語境稀釋。
+
+```
+優：fastapi-router-py + pydantic-models-py + azure-cosmos-db-py
+劣：載入所有 127 個技能「以防萬一」
+```
+
+### 3. 為複雜領域鏈接技能
+
+當任務橫跨多個領域時，依邏輯順序鏈接技能：
 
 ```
 Authentication → Data Layer → API Layer → Frontend
 azure-identity-py → azure-cosmos-db-py → fastapi-router-py → react-flow-node-ts
 ```
 
-### 4. Use Prompts for Repeatability
+### 4. 使用提示詞提高可重複性
 
-If you do the same workflow often, create a prompt template:
+如果你經常執行相同的工作流程，請建立提示詞範本：
 
 ```markdown
 ---

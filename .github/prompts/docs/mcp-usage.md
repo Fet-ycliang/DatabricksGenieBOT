@@ -1,119 +1,119 @@
-# MCP Server Usage for Agents
+# Agent 的 MCP 伺服器使用方式
 
-How agents interact with Model Context Protocol (MCP) servers configured in this repository.
+Agent 如何與此儲存庫中設定的 Model Context Protocol (MCP) 伺服器互動。
 
-## What is MCP?
+## 什麼是 MCP？
 
-MCP (Model Context Protocol) is a standard for connecting AI agents to external tools and data sources. MCP servers expose capabilities that agents can invoke during task execution.
+MCP (Model Context Protocol) 是一個標準，用於將 AI Agent 連接到外部工具和資料來源。MCP 伺服器暴露了 Agent 在任務執行期間可以呼叫的功能。
 
-## Configured MCP Servers
+## 已設定的 MCP 伺服器
 
-This repository provides MCP server configurations in `.vscode/mcp.json`:
+此儲存庫在 `.vscode/mcp.json` 中提供 MCP 伺服器設定：
 
-### Documentation Servers
+### 文件伺服器 (Documentation Servers)
 
-| Server | Purpose | When to Use |
+| 伺服器 | 用途 | 何時使用 |
 |--------|---------|-------------|
-| `microsoft-docs` | Search Microsoft Learn | **FIRST** before any Azure SDK implementation |
-| `context7` | Semantic search over indexed docs | When you need Foundry-specific patterns |
-| `deepwiki` | Query GitHub repositories | When researching OSS implementations |
+| `microsoft-docs` | 搜尋 Microsoft Learn | 在任何 Azure SDK 實作之前 **首先** 使用 |
+| `context7` | 對索引文件進行語意搜尋 | 當你需要 Foundry 特定的模式時 |
+| `deepwiki` | 查詢 GitHub 儲存庫 | 當研究開源軟體實作時 |
 
-### Development Servers
+### 開發伺服器 (Development Servers)
 
-| Server | Purpose | When to Use |
+| 伺服器 | 用途 | 何時使用 |
 |--------|---------|-------------|
-| `github` | GitHub API operations | PRs, issues, code search |
-| `playwright` | Browser automation | Testing, scraping, verification |
-| `terraform` | Infrastructure as code | Azure resource provisioning |
-| `eslint` | JavaScript/TypeScript linting | Code quality checks |
+| `github` | GitHub API 操作 | PR、Issue、程式碼搜尋 |
+| `playwright` | 瀏覽器自動化 | 測試、爬蟲、驗證 |
+| `terraform` | 基礎設施即程式碼 (IaC) | Azure 資源配置 |
+| `eslint` | JavaScript/TypeScript linting | 程式碼品質檢查 |
 
-### Utility Servers
+### 工具伺服器 (Utility Servers)
 
-| Server | Purpose | When to Use |
+| 伺服器 | 用途 | 何時使用 |
 |--------|---------|-------------|
-| `sequentialthinking` | Step-by-step reasoning | Complex multi-step problems |
-| `memory` | Persistent storage | Cross-session context |
-| `markitdown` | Document conversion | Converting files to markdown |
+| `sequentialthinking` | 逐步推理 | 複雜的多步驟問題 |
+| `memory` | 持久性儲存 | 跨工作階段的 context |
+| `markitdown` | 文件轉換 | 將檔案轉換為 markdown |
 
-## Agent Workflow: Using MCP Servers
+## Agent 工作流程：使用 MCP 伺服器
 
-### Pattern: Search Before Implement
+### 模式：實作前先搜尋
 
-**Critical**: Azure SDKs change frequently. Always search official docs before writing code.
+**關鍵**：Azure SDK 經常變更。在編寫程式碼之前，務必搜尋官方文件。
 
 ```
 User: "Create an Azure AI Search index with vector fields"
 
-Agent workflow:
-1. FIRST: Query microsoft-docs MCP
-   → Search: "Azure AI Search vector index Python SDK"
-   → Get: Current API signatures, required parameters
+Agent 工作流程：
+1. 首先：查詢 microsoft-docs MCP
+   → 搜尋："Azure AI Search vector index Python SDK"
+   → 取得：目前的 API 簽章、必要參數
    
-2. THEN: Load relevant skill
+2. 然後：載入相關技能
    → azure-search-documents-py
    
-3. FINALLY: Implement
-   → Use patterns from skill + current API from docs
+3. 最後：實作
+   → 使用技能中的模式 + 文件中的目前 API
 ```
 
-### Example: microsoft-docs MCP Usage
+### 範例：microsoft-docs MCP 使用方式
 
-The `microsoft-docs` MCP provides tools for searching Microsoft Learn:
+`microsoft-docs` MCP 提供搜尋 Microsoft Learn 的工具：
 
 ```
-Agent invokes: microsoft_docs_search
-Query: "azure-ai-projects AIProjectClient Python"
+Agent 呼叫：microsoft_docs_search
+查詢："azure-ai-projects AIProjectClient Python"
 
-Response:
+回應：
 - Title: "Azure AI Projects client library for Python"
 - URL: https://learn.microsoft.com/python/api/azure-ai-projects/
 - Excerpt: "AIProjectClient is the main entry point..."
 ```
 
-If search results are incomplete, fetch the full page:
+如果搜尋結果不完整，則擷取完整頁面：
 
 ```
-Agent invokes: microsoft_docs_fetch
+Agent 呼叫：microsoft_docs_fetch
 URL: "https://learn.microsoft.com/python/api/azure-ai-projects/"
 
-Response: Full markdown content of the documentation page
+回應：文件頁面的完整 markdown 內容
 ```
 
-### Example: context7 MCP Usage
+### 範例：context7 MCP 使用方式
 
-The `context7` MCP provides semantic search over this repository's indexed documentation:
+`context7` MCP 提供對此儲存庫索引文件的語意搜尋：
 
 ```
-Agent invokes: context7_query-docs
+Agent 呼叫：context7_query-docs
 Library: "/microsoft/agent-skills"
-Query: "How to create a Cosmos DB service layer with FastAPI"
+查詢："How to create a Cosmos DB service layer with FastAPI"
 
-Response:
-- Relevant skill content from azure-cosmos-db-py
-- Patterns for service layer implementation
-- FastAPI integration examples
+回應：
+- 來自 azure-cosmos-db-py 的相關技能內容
+- 服務層實作的模式
+- FastAPI 整合範例
 ```
 
-### Example: Combining MCP + Skills
+### 範例：結合 MCP + 技能
 
 ```
-Task: "Add Azure Blob Storage upload endpoint"
+任務："Add Azure Blob Storage upload endpoint"
 
-Step 1: Search current API
-  → microsoft-docs: "azure-storage-blob Python upload_blob"
-  → Get: Current BlobClient.upload_blob() signature
+步驟 1：搜尋目前 API
+  → microsoft-docs："azure-storage-blob Python upload_blob"
+  → 取得：目前的 BlobClient.upload_blob() 簽章
 
-Step 2: Load skills
-  → azure-storage-blob-py: Storage patterns
-  → fastapi-router-py: Endpoint patterns
+步驟 2：載入技能
+  → azure-storage-blob-py：儲存模式
+  → fastapi-router-py：端點模式
 
-Step 3: Implement using both
-  → Current API from docs + Patterns from skills
+步驟 3：同時使用兩者進行實作
+  → 來自文件的目前 API + 來自技能的模式
 ```
 
-## MCP Configuration Format
+## MCP 設定格式
 
-MCP servers are configured in `.vscode/mcp.json`:
+MCP 伺服器設定於 `.vscode/mcp.json`：
 
 ```json
 {
@@ -140,59 +140,59 @@ MCP servers are configured in `.vscode/mcp.json`:
 }
 ```
 
-## Agent Decision Tree for MCP Usage
+## Agent 使用 MCP 的決策樹
 
 ```
-Is task about Azure/Microsoft SDK?
-├─ YES → Query microsoft-docs FIRST
-│        Then load relevant skill
-│        Then implement
+任務是否關於 Azure/Microsoft SDK？
+├─ 是 → 首先查詢 microsoft-docs
+│       然後載入相關技能
+│       然後實作
 │
-└─ NO → Is task about this repository's patterns?
-        ├─ YES → Query context7
-        │        Then load relevant skill
+└─ 否 → 任務是否關於此儲存庫的模式？
+        ├─ 是 → 查詢 context7
+        │       然後載入相關技能
         │
-        └─ NO → Is task about external code/repos?
-                ├─ YES → Query deepwiki or github
+        └─ 否 → 任務是否關於外部程式碼/儲存庫？
+                ├─ 是 → 查詢 deepwiki 或 github
                 │
-                └─ NO → Proceed with skill-only approach
+                └─ 否 → 原則上採用僅使用技能的方法
 ```
 
-## Why MCP + Skills Together?
+## 為什麼要結合 MCP + 技能？
 
-| MCP Servers Provide | Skills Provide |
+| MCP 伺服器提供 | 技能提供 |
 |---------------------|----------------|
-| Current API signatures | Established patterns |
-| Latest documentation | Best practices |
-| Real-time data | Domain expertise |
-| External integrations | Coding standards |
+| 目前的 API 簽章 | 已建立的模式 |
+| 最新的文件 | 最佳實踐 |
+| 即時資料 | 領域專業知識 |
+| 外部整合 | 編碼標準 |
 
-**MCP = Fresh information. Skills = Proven patterns.**
+**MCP = 最新資訊。技能 = 經過驗證的模式。**
 
-Use both for reliable implementations:
+同時使用兩者以獲得可靠的實作：
 
 ```
-# BAD: Skill only (may use outdated API)
-Load azure-cosmos-db-py → Implement
+# 差：僅使用技能 (可能使用過時的 API)
+載入 azure-cosmos-db-py → 實作
 
-# BAD: MCP only (no patterns, reinventing wheel)
-Search docs → Implement from scratch
+# 差：僅使用 MCP (沒有模式，重新造輪子)
+搜尋文件 → 從頭開始實作
 
-# GOOD: MCP + Skill
-Search docs (current API) → Load skill (patterns) → Implement
+# 好：MCP + 技能
+搜尋文件 (目前 API) → 載入技能 (模式) → 實作
 ```
 
-## Troubleshooting
+## 疑難排解
 
-### MCP Server Not Responding
+### MCP 伺服器無回應
 
-1. Check server is installed: `npx -y @anthropic/microsoft-docs-mcp --version`
-2. Verify configuration in `.vscode/mcp.json`
-3. Check environment variables (e.g., `GITHUB_TOKEN` for github MCP)
+1. 檢查伺服器是否已安裝：`npx -y @anthropic/microsoft-docs-mcp --version`
+2. 驗證 `.vscode/mcp.json` 中的設定
+3. 檢查環境變數 (例如 github MCP 的 `GITHUB_TOKEN`)
 
-### Stale Results from context7
+### context7 的結果過時
 
-Context7 indexes are updated daily via GitHub Actions. For the freshest content:
-1. Check when workflow last ran: `.github/workflows/update-llms-txt.yml`
-2. For immediate updates, trigger workflow manually
-3. Fall back to `microsoft-docs` for authoritative current info
+Context7 索引透過 GitHub Actions 每日更新。若要取得最新內容：
+1. 檢查 workflow 上次執行的時間：`.github/workflows/update-llms-txt.yml`
+2. 若要立即更新，手動觸發 workflow
+3. 改用 `microsoft-docs` 以取得權威的最新資訊

@@ -1,296 +1,188 @@
-# Copilot Instructions for Agent Skills
+# Databricks Genie BOT Copilot 指引
 
-## Project Overview
+## 專案概述
 
-Agent Skills is a repository of skills, prompts, and MCP configurations for AI coding agents working with Azure SDKs and Microsoft AI Foundry services.
+Databricks Genie BOT 是一個整合 Databricks Genie API 的 Microsoft Teams 機器人專案。本專案使用 FastAPI 作為後端框架，結合 Microsoft Bot Framework SDK 處理對話邏輯，並透過 Databricks SDK 與 Genie 服務互動。
 
-## ⚠️ Fresh Information First
+## ⚠️ 優先獲取最新資訊
 
-**Azure SDKs and Foundry APIs change constantly. Never work with stale knowledge.**
+**Azure SDK 和 Foundry API 經常變更。絕不使用過時的知識。**
 
-Before implementing anything with Azure/Foundry SDKs:
+在使用 Azure/Foundry SDK 實作任何功能之前：
 
-1. **Search official docs first** — Use the Microsoft Docs MCP (`microsoft-docs`) to get current API signatures, parameters, and patterns
-2. **Verify SDK versions** — Check `pip show <package>` for installed versions; APIs differ between versions
-3. **Don't trust cached knowledge** — Your training data is outdated. The SDK you "know" may have breaking changes.
+1. **先搜尋官方文件** — 使用 Microsoft Docs MCP (`microsoft-docs`) 取得目前的 API 簽章、參數和模式。
+2. **驗證 SDK 版本** — 檢查 `pip show <package>` 以確認已安裝的版本；不同版本間的 API 可能會有差異。
+3. **不要相信快取的知識** — 你的訓練資料可能已經過時。你所「知道」的 SDK 可能有破壞性的變更。
 
-**If you skip this step and use outdated patterns, you will produce broken code.**
-
----
-
-## Core Principles
-
-Apply these principles to every task.
-
-### 1. Think Before Coding
-
-**Don't assume. Don't hide confusion. Surface tradeoffs.**
-
-- State assumptions explicitly. If uncertain, ask.
-- If multiple interpretations exist, present them — don't pick silently.
-- If a simpler approach exists, say so. Push back when warranted.
-- If something is unclear, stop. Name what's confusing. Ask.
-
-### 2. Simplicity First
-
-**Minimum code that solves the problem. Nothing speculative.**
-
-- No features beyond what was asked.
-- No abstractions for single-use code.
-- No "flexibility" or "configurability" that wasn't requested.
-- If you write 200 lines and it could be 50, rewrite it.
-
-**The test:** Would a senior engineer say this is overcomplicated? If yes, simplify.
-
-### 3. Surgical Changes
-
-**Touch only what you must. Clean up only your own mess.**
-
-- Don't "improve" adjacent code, comments, or formatting.
-- Don't refactor things that aren't broken.
-- Match existing style, even if you'd do it differently.
-- If you notice unrelated dead code, mention it — don't delete it.
-- Remove imports/variables/functions that YOUR changes made unused.
-- Don't remove pre-existing dead code unless asked.
-
-**The test:** Every changed line should trace directly to the user's request.
-
-### 4. Goal-Driven Execution (TDD)
-
-**Define success criteria. Loop until verified.**
-
-| Instead of... | Transform to... |
-|---------------|-----------------|
-| "Add validation" | "Write tests for invalid inputs, then make them pass" |
-| "Fix the bug" | "Write a test that reproduces it, then make it pass" |
-| "Refactor X" | "Ensure tests pass before and after" |
+**如果你跳過此步驟並使用過時的模式，你將會產生無法運作的程式碼。**
 
 ---
 
-## Repository Structure
+## 核心原則與標準
 
+所有開發工作必須嚴格遵循以下原則：
+
+### 1. 語言要求
+
+**嚴格強制使用繁體中文 (Traditional Chinese)** 於所有人類可讀的文字：
+- 實作計畫 (Implementation Plans)
+- 程式碼註解 (Code Comments)
+- 文件 (Documentation)
+- 機器人回應 (Bot Responses)
+- Git Commit 訊息
+
+### 2. 編碼標準
+
+- **Python 風格**：遵循 PEP 8。
+- **非阻塞 I/O**：所有 I/O 操作 (API, DB) 必須使用 `async/await`。禁止使用 `time.sleep()` 或同步 `requests`。
+- **文件字串**：所有函式和類別必須有繁體中文 docstrings (Google/NumPy style)。
+- **環境變數**：絕不硬編碼 secrets，使用 `os.environ` 或 `os.getenv`。
+
+### 3.寫程式前先思考
+
+**不要假設。不要隱藏困惑。提出權衡方案。**
+
+- 明確陳述假設。如果不確定，請發問。
+- 如果存在多種解釋，請將它們呈現出來 — 不要默默地選擇其中一種。
+
+### 4. 簡潔至上
+
+**用最少的程式碼解決問題。不做推測性的開發。**
+
+- 不要開發超出要求的功能。
+- 如果你寫了 200 行程式碼，但其實 50 行就能解決，請重寫。
+
+---
+
+## 儲存庫結構
+
+本專案遵循以下推薦結構：
+
+```text
+.
+├── .github/             # CI/CD Workflows & SDK Skills
+│   ├── skills/          # SDK/Library specific skills (e.g., azure-identity-py)
+│   └── prompts/         # Reusable prompts
+├── app/                 # 主要應用程式套件
+│   ├── main.py          # FastAPI 入口點
+│   ├── api/             # API Routers
+│   ├── services/        # 業務邏輯
+│   └── models/          # Pydantic Models
+├── bot/                 # Bot Framework 特定內容
+├── tests/               # 測試套件
+├── config.py            # 設定檔
+├── pyproject.toml       # 依賴管理
+└── requirements.txt     # 依賴列表
 ```
-AGENTS.md                # Agent configuration template
 
-.github/
-├── skills/              # All 127 skills (flat structure with language suffixes)
-│   └── */SKILL.md       # Each skill has YAML frontmatter + markdown body
-├── prompts/             # Reusable prompt templates
-├── agents/              # Agent persona definitions (backend, frontend, infrastructure, planner, presenter)
-├── scripts/             # Automation scripts (doc scraping)
-├── workflows/           # GitHub Actions (daily doc updates)
-└── copilot-instructions.md
+## 技能 (Skills)
 
-output/                  # Generated llms.txt files (daily workflow)
-├── llms.txt             # Links + summaries
-└── llms-full.txt        # Full content
+本專案使用位於 `.github/skills/` 中的 SDK 層級技能來輔助開發。
 
-skills/                  # Symlinks for backward compatibility
-├── python/              # -> ../.github/skills/*-py
-├── dotnet/              # -> ../.github/skills/*-dotnet
-├── typescript/          # -> ../.github/skills/*-ts
-└── java/                # -> ../.github/skills/*-java
+### 可用技能
 
-.vscode/
-└── mcp.json             # MCP server configurations
-```
-
-## Skills
-
-Skills are domain-specific knowledge packages in `.github/skills/`. Each skill has a `SKILL.md` with:
-- **YAML frontmatter** (`name`, `description`) — triggers skill loading
-- **Markdown body** — loaded only when skill activates
-
-### Skill Naming Convention
-
-Skills use language suffixes for discoverability:
-
-| Language | Suffix | Examples |
-|----------|--------|----------|
-| **Core** | — | `mcp-builder`, `skill-creator`, `azd-deployment` |
-| **Python** | `-py` | `azure-ai-inference-py`, `azure-cosmos-db-py`, `azure-ai-projects-py` |
-| **.NET** | `-dotnet` | `azure-ai-inference-dotnet`, `azure-resource-manager-cosmosdb-dotnet` |
-| **TypeScript** | `-ts` | `azure-ai-inference-ts`, `azure-ai-agents-ts`, `fluent-ui-dark-ts` |
-| **Java** | `-java` | `azure-ai-inference-java`, `azure-cosmos-java` |
-
-### Featured Skills
-
-| Skill | Purpose |
+| 技能 | 用途 |
 |-------|---------|
-| `azure-search-documents-py` | Search SDK patterns, vector/hybrid search, agentic retrieval |
-| `azure-ai-agents-py` | Low-level agents SDK for CRUD, threads, streaming, tools |
-| `azure-ai-voicelive-py` | Real-time voice AI with Azure AI Voice Live SDK |
-| `azure-ai-projects-py` | High-level Foundry project client, versioned agents, evals |
-| `foundry-iq-py` | Agentic retrieval with knowledge bases |
-| `fluent-ui-dark-ts` | Fluent UI Dark design system UI patterns (Vite + React) |
-| `agent-framework-azure-ai-py` | Agent Framework SDK for persistent Azure agents |
-| `azd-deployment` | Azure Developer CLI deployment to Container Apps with Bicep |
-| `mcp-builder` | Building MCP servers (Python/Node/C#) |
-| `azure-cosmos-db-py` | Cosmos DB NoSQL with Python/FastAPI |
-| `fastapi-router-py` | FastAPI routers with CRUD, auth, response models |
-| `pydantic-models-py` | Pydantic v2 multi-model patterns |
-| `zustand-store-ts` | Zustand stores with TypeScript and subscribeWithSelector |
-| `react-flow-node-ts` | React Flow custom nodes with TypeScript |
-| `podcast-generation` | Podcast generation workflows |
-| `skill-creator` | Guide for creating new skills |
-| `github-issue-creator` | GitHub issue creation patterns |
+| `azure-identity-py` | Azure Identity SDK 身份驗證 (DefaultAzureCredential) |
+| `azure-monitor-opentelemetry-py` | Azure Monitor OpenTelemetry 監控整合 |
+| `botbuilder-py` | Microsoft Bot Framework SDK for Python |
+| `databricks-sdk-py` | Databricks SDK 與 Genie API 互動 |
+| `fastapi-py` | FastAPI 框架開發模式 |
+| `matplotlib-seaborn-py` | 資料視覺化與圖表產生 |
+| `microsoft-graph-py` | Microsoft Graph API 整合 (Async HTTP) |
+| `project-guidelines` | 專案核心指引與標準 |
+| `python-dotenv` | 環境變數管理 |
+| `teams-sso-provider-py` | Teams SSO 身份驗證實作 |
 
-📖 **See [README.md#skill-catalog](../README.md#skill-catalog) for all 127 skills**
+📖 **請參閱 [README.md](../../README.md) 以取得專案詳細資訊與架構說明**
 
-### Skill Selection
+### 技能選擇
 
-Only load skills relevant to the current task. Loading all skills causes context rot — diluted attention and conflated patterns.
+只載入與當前任務相關的技能。載入所有技能會導致語境腐爛 (context rot) — 注意力分散和模式混淆。
 
 ---
 
-## MCP Servers
+## MCP 伺服器
 
-Pre-configured Model Context Protocol servers in `.vscode/mcp.json` provide additional capabilities:
+在 `.vscode/mcp.json` 中預先設定的 Model Context Protocol 伺服器提供了額外的功能：
 
-### Documentation & Search
+### 文件與搜尋
 
-| MCP | Purpose |
+| MCP | 用途 |
 |-----|---------|
-| `microsoft-docs` | **Search Microsoft Learn** — Official Azure/Foundry docs. Use this FIRST. |
-| `context7` | Indexed documentation with semantic search |
-| `deepwiki` | Ask questions about GitHub repositories |
+| `microsoft-docs` | **搜尋 Microsoft Learn** — 官方 Azure/Foundry 文件。優先使用此功能。 |
+| `context7` | 具有語意搜尋功能的索引文件 |
+| `deepwiki` | 詢問有關 GitHub 儲存庫的問題 |
 
-### Development Tools
+### 開發工具
 
-| MCP | Purpose |
+| MCP | 用途 |
 |-----|---------|
-| `github` | GitHub API operations |
-| `playwright` | Browser automation and testing |
-| `terraform` | Infrastructure as code |
+| `github` | GitHub API 操作 |
+| `playwright` | 瀏覽器自動化與測試 |
+| `terraform` | 基礎設施即程式碼 (IaC) |
 | `eslint` | JavaScript/TypeScript linting |
 
-### Utilities
-
-| MCP | Purpose |
-|-----|---------|
-| `sequentialthinking` | Step-by-step reasoning for complex problems |
-| `memory` | Persistent memory across sessions |
-| `markitdown` | Convert documents to markdown |
-
-**Usage:** MCPs are available when configured in your editor. Use `microsoft-docs` to search official documentation before implementing Azure SDK code.
-
 ---
 
-## SDK Quick Reference
+## SDK 快速參考
 
-| Package | Purpose | Install |
+| 套件 | 用途 | 安裝 |
 |---------|---------|---------|
-| `azure-ai-projects` | Foundry project client, agents, evals, connections | `pip install azure-ai-projects` |
-| `azure-ai-agents` | Standalone agents client (use via projects) | `pip install azure-ai-agents` |
-| `azure-search-documents` | Azure AI Search SDK | `pip install azure-search-documents` |
-| `azure-identity` | Authentication | `pip install azure-identity` |
-
-### Authentication Pattern
-
-Always use `DefaultAzureCredential` for production:
-
-```python
-from azure.identity import DefaultAzureCredential
-from azure.ai.projects import AIProjectClient
-
-credential = DefaultAzureCredential()
-client = AIProjectClient(
-    endpoint="https://<resource>.services.ai.azure.com/api/projects/<project>",
-    credential=credential
-)
-```
-
-### Environment Variables
-
-```bash
-AZURE_AI_PROJECT_ENDPOINT=https://<resource>.services.ai.azure.com/api/projects/<project>
-AZURE_AI_MODEL_DEPLOYMENT_NAME=gpt-4o-mini
-```
+| `databricks-sdk` | Databricks Genie API 互動 | `pip install databricks-sdk` |
+| `botbuilder-core` | Bot Framework 核心邏輯 | `pip install botbuilder-core` |
+| `fastapi[standard]` | Web API 框架 | `pip install "fastapi[standard]"` |
+| `msgraph-core` | Microsoft Graph 整合 | `pip install msgraph-core` |
+| `azure-identity` | 身份驗證 | `pip install azure-identity` |
 
 ---
 
-## Conventions
+## 慣例
 
-### Code Style
+### 程式碼風格
 
-- Prefer `async/await` for all Azure SDK I/O
-- Use context managers: `with client:` or `async with client:`
-- Close clients explicitly or use context managers
-- Use `create_or_update_*` for idempotent operations
-- Use type hints on all function signatures
+- 所有 I/O 操作優先使用 `async/await`
+- 使用 context managers：`with client:` 或 `async with client:`
+- 明確關閉用戶端或使用 context managers
+- 在所有函式簽章上使用型別提示 (type hints)
 
-### Clean Code Checklist
+### 整潔程式碼檢查清單
 
-Before completing any code change:
+在完成任何程式碼變更之前：
 
-- [ ] Functions do one thing
-- [ ] Names are descriptive and intention-revealing
-- [ ] No magic numbers or strings (use constants)
-- [ ] Error handling is explicit (no empty catch blocks)
-- [ ] No commented-out code
-- [ ] Tests cover the change
-
-### Testing Patterns
-
-```python
-# Arrange
-service = ProjectService()
-expected = Project(id="123", name="test")
-
-# Act  
-result = await service.get_project("123")
-
-# Assert
-assert result == expected
-```
+- [ ] 函式只做一件事
+- [ ] 命名具描述性且能揭示意圖
+- [ ] 沒有魔術數字或字串 (使用常數)
+- [ ] 錯誤處理是明確的 (沒有空的 catch區塊)
+- [ ] 沒有被註解掉的程式碼
+- [ ] 測試涵蓋了變更
 
 ---
 
-## Creating New Skills
+## Do's and Don'ts (要做與不要做)
 
-1. Create a new directory under `.github/skills/<skill-name>/`
-   - Use language suffix: `-py`, `-dotnet`, `-ts`, `-java`
-   - Core/cross-language skills have no suffix
-   - Example: `azure-cosmos-db-py`, `azure-ai-inference-dotnet`, `mcp-builder`
-2. Add a `SKILL.md` file with YAML frontmatter:
-   ```yaml
-   ---
-   name: skill-name-py
-   description: Brief description of what the skill does and when to use it
-   ---
-   ```
-3. Add detailed instructions in the markdown body
-4. Keep skills focused on a single domain
-5. Reference official docs via `microsoft-docs` MCP for current API patterns
+### 要做 (Do)
 
----
+- ✅ 使用 `DefaultAzureCredential` 進行身份驗證
+- ✅ 對所有 I/O 操作使用 async/await
+- ✅ 在實作之前或同時撰寫測試
+- ✅ 使用繁體中文撰寫所有文件與註解
 
-## Do's and Don'ts
+### 不要做 (Don't)
 
-### Do
-
-- ✅ Use `DefaultAzureCredential` for authentication
-- ✅ Use async/await for all Azure SDK operations
-- ✅ Write tests before or alongside implementation
-- ✅ Keep functions small and focused
-- ✅ Match existing patterns in the codebase
-
-### Don't
-
-- ❌ Hardcode credentials or endpoints
-- ❌ Suppress type errors (`as any`, `@ts-ignore`, `# type: ignore`)
-- ❌ Leave empty exception handlers
-- ❌ Refactor unrelated code while fixing bugs
-- ❌ Add dependencies without justification
+- ❌ 硬編碼 (Hardcode) 憑證或端點
+- ❌ 壓制型別錯誤 (`as any`, `@ts-ignore`, `# type: ignore`)
+- ❌ 留下空的例外處理程序
+- ❌ 使用英文撰寫 Commit 訊息或註解
 
 ---
 
-## Success Indicators
+## 成功指標
 
-These principles are working if you see:
+如果你看到以下情況，代表這些原則正在發揮作用：
 
-- Fewer unnecessary changes in diffs
-- Fewer rewrites due to overcomplication
-- Clarifying questions come before implementation (not after mistakes)
-- Clean, minimal PRs without drive-by refactoring
-- Tests that document expected behavior
+- diffs 中不必要的變更變少了
+- 因過度複雜而導致的重寫變少了
+- 澄清問題發生在實作之前 (而不是在犯錯之後)
+- 乾淨、極簡的 PR，沒有順便進行的重構 (drive-by refactoring)
+- 文件化預期行為的測試

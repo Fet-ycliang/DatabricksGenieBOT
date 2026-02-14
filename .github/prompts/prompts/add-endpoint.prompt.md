@@ -3,22 +3,22 @@ mode: ask
 description: Add a new REST API endpoint with Pydantic models, service, and router
 ---
 
-# Add API Endpoint
+# 新增 API 端點 (Add API Endpoint)
 
-Create a new REST API endpoint following CoreAI DIY patterns.
+遵守 CoreAI DIY 模式建立一個新的 REST API 端點。
 
-## Variables
+## 變數
 
-- `RESOURCE_NAME`: The resource name (singular, e.g., `annotation`)
-- `RESOURCE_PLURAL`: Plural form (e.g., `annotations`)
-- `RESOURCE_DESCRIPTION`: Brief description
-- `RESOURCE_FIELDS`: Key fields for the resource
+- `RESOURCE_NAME`: 資源名稱 (單數，例如 `annotation`)
+- `RESOURCE_PLURAL`: 複數形式 (例如 `annotations`)
+- `RESOURCE_DESCRIPTION`: 簡短描述
+- `RESOURCE_FIELDS`: 資源的關鍵欄位
 
-## Steps
+## 步驟
 
-### 1. Define Pydantic Models
+### 1. 定義 Pydantic 模型
 
-Create `src/backend/app/models/${RESOURCE_NAME}.py`:
+建立 `src/backend/app/models/${RESOURCE_NAME}.py`：
 
 ```python
 from datetime import datetime
@@ -57,9 +57,9 @@ class ${RESOURCE_NAME.title()}InDB(${RESOURCE_NAME.title()}):
     doc_type: str = "${RESOURCE_NAME}"
 ```
 
-### 2. Create Service
+### 2. 建立服務
 
-Create `src/backend/app/services/${RESOURCE_NAME}_service.py`:
+建立 `src/backend/app/services/${RESOURCE_NAME}_service.py`：
 
 ```python
 from typing import Optional
@@ -92,9 +92,9 @@ class ${RESOURCE_NAME.title()}Service:
         return ${RESOURCE_NAME.title()}(**doc)
 ```
 
-### 3. Create Router
+### 3. 建立 Router
 
-Create `src/backend/app/routers/${RESOURCE_PLURAL}.py`:
+建立 `src/backend/app/routers/${RESOURCE_PLURAL}.py`：
 
 ```python
 from typing import Optional
@@ -151,18 +151,18 @@ async def delete_${RESOURCE_NAME}(
     pass
 ```
 
-### 4. Mount Router
+### 4. 掛載 Router
 
-In `src/backend/app/main.py`:
+在 `src/backend/app/main.py` 中：
 
 ```python
 from app.routers.${RESOURCE_PLURAL} import router as ${RESOURCE_PLURAL}_router
 app.include_router(${RESOURCE_PLURAL}_router)
 ```
 
-### 5. Add Frontend Types
+### 5. 新增前端型別
 
-In `src/frontend/src/types/index.ts`:
+在 `src/frontend/src/types/index.ts` 中：
 
 ```typescript
 export interface ${RESOURCE_NAME.title()} {
@@ -177,9 +177,9 @@ export interface ${RESOURCE_NAME.title()}Create {
 }
 ```
 
-### 6. Add API Functions
+### 6. 新增 API 函式
 
-In `src/frontend/src/services/api.ts`:
+在 `src/frontend/src/services/api.ts` 中：
 
 ```typescript
 export async function get${RESOURCE_NAME.title()}(id: string): Promise<${RESOURCE_NAME.title()}> {
@@ -194,12 +194,12 @@ export async function create${RESOURCE_NAME.title()}(data: ${RESOURCE_NAME.title
 }
 ```
 
-## Checklist
+## 檢查清單
 
-- [ ] Pydantic models (Base, Create, Update, Response, InDB)
-- [ ] Service with Cosmos DB integration
-- [ ] Router with auth dependencies
-- [ ] Router mounted in main.py
-- [ ] Frontend types
-- [ ] API client functions
-- [ ] Tests added
+- [ ] Pydantic 模型 (Base, Create, Update, Response, InDB)
+- [ ] 整合 Cosmos DB 的服務
+- [ ] 帶有身份驗證依賴項的 Router
+- [ ] Router 已掛載於 main.py
+- [ ] 前端型別
+- [ ] API 用戶端函式
+- [ ] 已新增測試

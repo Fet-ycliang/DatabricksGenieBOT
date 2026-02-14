@@ -3,22 +3,22 @@ mode: ask
 description: Create a new Zustand store with subscribeWithSelector middleware
 ---
 
-# Create Zustand Store
+# 建立 Zustand Store (Create Zustand Store)
 
-Create a new Zustand store following CoreAI DIY patterns.
+遵守 CoreAI DIY 模式建立一個新的 Zustand store。
 
-## Variables
+## 變數
 
-- `STORE_NAME`: The store name (e.g., `settings`)
-- `STORE_DESCRIPTION`: Brief description of what the store manages
-- `STATE_FIELDS`: Key state fields
-- `ACTIONS`: Key actions the store needs
+- `STORE_NAME`: Store 名稱 (例如 `settings`)
+- `STORE_DESCRIPTION`: Store 管理內容的簡短描述
+- `STATE_FIELDS`: 關鍵狀態欄位
+- `ACTIONS`: Store 所需的關鍵動作
 
-## Steps
+## 步驟
 
-### 1. Create Store File
+### 1. 建立 Store 檔案
 
-Create `src/frontend/src/store/${STORE_NAME}-store.ts`:
+建立 `src/frontend/src/store/${STORE_NAME}-store.ts`：
 
 ```typescript
 import { create } from 'zustand';
@@ -67,9 +67,9 @@ export const use${STORE_NAME.charAt(0).toUpperCase() + STORE_NAME.slice(1)}Store
 );
 ```
 
-### 2. Export from Barrel
+### 2. 從 Barrel 匯出
 
-Add to `src/frontend/src/store/index.ts`:
+新增至 `src/frontend/src/store/index.ts`：
 
 ```typescript
 export { use${STORE_NAME.charAt(0).toUpperCase() + STORE_NAME.slice(1)}Store } from './${STORE_NAME}-store';
@@ -80,7 +80,7 @@ export type {
 } from './${STORE_NAME}-store';
 ```
 
-### 3. Usage in Components
+### 3. 在元件中使用
 
 ```typescript
 import { use${STORE_NAME.charAt(0).toUpperCase() + STORE_NAME.slice(1)}Store } from '@/store';
@@ -100,7 +100,7 @@ function MyComponent() {
 }
 ```
 
-### 4. Subscribe to Changes (optional)
+### 4. 訂閱變更 (選填)
 
 ```typescript
 // Subscribe to specific state changes
@@ -112,9 +112,9 @@ use${STORE_NAME.charAt(0).toUpperCase() + STORE_NAME.slice(1)}Store.subscribe(
 );
 ```
 
-## Patterns
+## 模式
 
-### Async Actions
+### 非同步動作 (Async Actions)
 ```typescript
 loadData: async () => {
   set({ isLoading: true, error: null });
@@ -127,7 +127,7 @@ loadData: async () => {
 },
 ```
 
-### Computed Values
+### 計算值 (Computed Values)
 ```typescript
 // Use get() to access current state
 getFilteredItems: () => {
@@ -136,7 +136,7 @@ getFilteredItems: () => {
 },
 ```
 
-### Batch Updates
+### 批次更新 (Batch Updates)
 ```typescript
 // Single set() call for multiple updates
 updateMultiple: (updates) => {
@@ -148,11 +148,11 @@ updateMultiple: (updates) => {
 },
 ```
 
-## Checklist
+## 檢查清單
 
-- [ ] Store file created with subscribeWithSelector
-- [ ] State interface defined
-- [ ] Actions interface defined
-- [ ] Initial state defined
-- [ ] Exported from barrel
-- [ ] Tests added
+- [ ] Store 檔案已建立並使用 subscribeWithSelector
+- [ ] State 介面已定義
+- [ ] Actions 介面已定義
+- [ ] Initial state 已定義
+- [ ] 已從 Barrel 匯出
+- [ ] 已新增測試

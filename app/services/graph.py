@@ -1,5 +1,5 @@
 from typing import Optional, Dict, Any
-import aiohttp
+import httpx
 from botbuilder.core import TurnContext
 from botbuilder.schema import Activity, ActivityTypes
 
@@ -52,10 +52,10 @@ class GraphService:
             "Authorization": f"Bearer {access_token}",
             "Content-Type": "application/json"
         }
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=headers) as resp:
-                if resp.status == 200:
-                    return await resp.json()
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(url, headers=headers)
+            if resp.status_code == 200:
+                return resp.json()
         return {}
 
     @staticmethod

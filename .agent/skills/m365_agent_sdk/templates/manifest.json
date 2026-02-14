@@ -1,0 +1,44 @@
+{
+    "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.16/MicrosoftTeams.schema.json",
+    "version": "1.0.0",
+    "manifestVersion": "1.16",
+    "id": "{{APP_ID}}",
+    "packageName": "com.package.name",
+    "name": {
+        "short": "My Agent App",
+        "full": "My Awesome Microsoft 365 Agent Application"
+    },
+    "developer": {
+        "name": "Developer Name",
+        "websiteUrl": "https://website.com",
+        "privacyUrl": "https://website.com/privacy",
+        "termsOfUseUrl": "https://website.com/terms"
+    },
+    "description": {
+        "short": "Short description of the app.",
+        "full": "Full description of the app and its capabilities."
+    },
+    "icons": {
+        "outline": "icon-outline.png",
+        "color": "icon-color.png"
+    },
+    "accentColor": "#FFFFFF",
+    "staticTabs": [],
+    "bots": [
+        {
+            "botId": "{{BOT_ID}}",
+            "scopes": [
+                "personal",
+                "team",
+                "groupchat"
+            ],
+            "supportsFiles": false,
+            "isNotificationOnly": false
+        }
+    ],
+    "permissions": [
+        "identity",
+        "messageTeamMembers"
+    ],
+    "validDomains": []
+}

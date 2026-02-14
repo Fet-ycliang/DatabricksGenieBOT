@@ -12,9 +12,9 @@ from asyncio.log import logger
 from contextlib import asynccontextmanager
 from typing import Any, Dict, Optional, Tuple
 
-import aiohttp
+import httpx
 from databricks.sdk import WorkspaceClient
-from databricks.sdk.service.dashboards import GenieAPI
+from databricks.sdk.service.dashboards import GenieAPI, GenieFeedbackRating
 
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.service.dashboards import GenieAPI
@@ -79,6 +79,7 @@ class GenieService:
         self._config = config
         self._workspace_client = workspace_client or self._create_workspace_client()
         self._genie_api = GenieAPI(self._workspace_client.api_client)
+        self._supports_feedback_api = hasattr(self._genie_api, "send_message_feedback")
         # HTTP 連接池
         self._http_session = None
         # 性能指標收集器
@@ -131,28 +132,26 @@ class GenieService:
     @asynccontextmanager
     async def get_http_session(self):
         """重用 HTTP Session 減少連接開銷，配置超時防止掛起"""
-        if self._http_session is None or self._http_session.closed:
-            connector = aiohttp.TCPConnector(
-                limit=100,           # 連接池大小
-                limit_per_host=30,   # 每個主機的連接限制
-                ttl_dns_cache=300    # DNS 快取 5 分鐘
+        if self._http_session is None or self._http_session.is_closed:
+            timeout = httpx.Timeout(
+                timeout=30.0,
+                connect=5.0,
+                read=10.0,
+                write=10.0,
             )
-            # 配置分層超時：連接 5s, 讀取 10s, 總耗時 30s
-            timeout = aiohttp.ClientTimeout(
-                total=30,      # 整個請求的總超時時間
-                connect=5,     # 連接建立超時
-                sock_read=10,  # Socket 讀取超時
-                sock_connect=5 # Socket 連接超時
+            limits = httpx.Limits(
+                max_connections=100,
+                max_keepalive_connections=30,
             )
-            self._http_session = aiohttp.ClientSession(
-                connector=connector,
+            self._http_session = httpx.AsyncClient(
                 timeout=timeout,
+                limits=limits,
                 headers={
                     "User-Agent": "DatabricksGenieBOT/1.0",
-                    "Accept-Encoding": "gzip, deflate"
-                }
+                    "Accept-Encoding": "gzip, deflate",
+                },
             )
-            logger.info("✅ HTTP Session 已建立，超時配置：總 30s, 連接 5s, 讀取 10s")
+            logger.info("✅ HTTP Client 已建立，超時配置：總 30s, 連接 5s, 讀取 10s")
         try:
             yield self._http_session
         finally:
@@ -161,8 +160,8 @@ class GenieService:
     async def close(self):
         """關閉 HTTP Session（應用程式關閉時調用）"""
         try:
-            if self._http_session and not self._http_session.closed:
-                await self._http_session.close()
+            if self._http_session and not self._http_session.is_closed:
+                await self._http_session.aclose()
                 logger.info("🔌 已關閉 HTTP Session")
         except Exception as e:
             logger.error(f"關閉 HTTP Session 時發生錯誤: {e}")
@@ -336,14 +335,13 @@ class GenieService:
                 )
                 fetch_start = time.time()
                 
-                query_result_task = loop.run_in_executor(
-                    None,
-                    self._genie_api.get_message_attachment_query_result,
-                    space_id,
-                    initial_message.conversation_id,
-                    initial_message.message_id,
-                    initial_message.attachments[0].attachment_id,
-                )
+                query_attachment_id = None
+                if initial_message.attachments:
+                    for attachment in initial_message.attachments:
+                        if hasattr(attachment, "query") and attachment.query:
+                            query_attachment_id = attachment.attachment_id
+                            break
+
                 message_content_task = loop.run_in_executor(
                     None,
                     self._genie_api.get_message,
@@ -351,11 +349,26 @@ class GenieService:
                     initial_message.conversation_id,
                     initial_message.message_id,
                 )
-                
-                query_result, message_content = await asyncio.gather(
-                    query_result_task,
-                    message_content_task
-                )
+
+                if query_attachment_id:
+                    query_result_task = loop.run_in_executor(
+                        None,
+                        self._genie_api.get_message_attachment_query_result,
+                        space_id,
+                        initial_message.conversation_id,
+                        initial_message.message_id,
+                        query_attachment_id,
+                    )
+                    query_result, message_content = await asyncio.gather(
+                        query_result_task,
+                        message_content_task
+                    )
+                else:
+                    logger.warning(
+                        f"[{request_id}] ⚠️ 找不到 Query 附件，跳過 query-result 取得"
+                    )
+                    query_result = None
+                    message_content = await message_content_task
                 
                 fetch_elapsed = time.time() - fetch_start
                 
@@ -691,22 +704,29 @@ class GenieService:
     ) -> None:
         loop = asyncio.get_running_loop()
         try:
-            await loop.run_in_executor(
-                None,
-                self._genie_api.send_message_feedback,
-                space_id,
-                conversation_id,
-                message_id,
-                feedback_type,
-            )
-            logger.info(
-                f"✅ 回饋已發送\n"
-                f"  對話 ID:      {conversation_id}\n"
-                f"  訊息 ID:      {message_id}\n"
-                f"  類型:         {feedback_type}"
-            )
-        except AttributeError:
-            logger.warning("⚠️  找不到 send_message_feedback 方法，嘗試替代方法")
+            if self._supports_feedback_api:
+                rating = (
+                    GenieFeedbackRating.POSITIVE
+                    if feedback_type == "POSITIVE"
+                    else GenieFeedbackRating.NEGATIVE
+                )
+                await loop.run_in_executor(
+                    None,
+                    self._genie_api.send_message_feedback,
+                    space_id,
+                    conversation_id,
+                    message_id,
+                    rating,
+                )
+                logger.info(
+                    f"✅ 回饋已發送\n"
+                    f"  對話 ID:      {conversation_id}\n"
+                    f"  訊息 ID:      {message_id}\n"
+                    f"  類型:         {feedback_type}"
+                )
+                return
+
+            logger.info("ℹ️  Genie SDK 無 send_message_feedback，改用 HTTP API")
             await self._send_genie_feedback_alternative(space_id, conversation_id, message_id, feedback_type)
         except Exception as exc:
             logger.error(
@@ -736,17 +756,17 @@ class GenieService:
 
         logger.info("正在發送回饋到: %s", api_endpoint)
         async with self.get_http_session() as session:
-            async with session.post(api_endpoint, json=payload, headers=headers) as response:
-                response_text = await response.text()
-                if response.status == 200:
-                    logger.info("透過 HTTP API 成功發送 %s 回饋", feedback_type)
-                else:
-                    logger.error(
-                        "透過 HTTP API 發送回饋失敗: %s - %s",
-                        response.status,
-                        response_text,
-                    )
-                    raise Exception(f"HTTP {response.status}: {response_text}")
+            response = await session.post(api_endpoint, json=payload, headers=headers)
+            response_text = response.text
+            if response.status_code == 200:
+                logger.info("透過 HTTP API 成功發送 %s 回饋", feedback_type)
+            else:
+                logger.error(
+                    "透過 HTTP API 發送回饋失敗: %s - %s",
+                    response.status_code,
+                    response_text,
+                )
+                raise Exception(f"HTTP {response.status_code}: {response_text}")
 
     async def get_last_message_id(self, conversation_id: Optional[str]) -> Optional[str]:
         if not conversation_id:
@@ -826,9 +846,13 @@ def _analyze_chart_suitability(columns: dict, data: dict) -> dict:
         
         # 獲取數據行
         data_array = data.get('data_array', [])
-        if not data_array or len(data_array) < 2 or len(data_array) > 20:
-            # 太少或太多數據都不適合圖表
+        if not data_array or len(data_array) < 2:
+            # 太少數據不適合圖表
             return {'suitable': False}
+        
+        # 限制圖表數據點的數量（超過50條時只取前50條）
+        if len(data_array) > 50:
+            data_array = data_array[:50]
         
         # 分析列類型
         category_col = None
@@ -836,21 +860,39 @@ def _analyze_chart_suitability(columns: dict, data: dict) -> dict:
         category_idx = None
         value_idx = None
         
+        # 先檢查列的信息用於調試
+        logger.debug(f"分析圖表 - 列信息: {[col.get('name', '') for col in col_list]}")
+        logger.debug(f"列類型信息: {[col.get('type_text', '') for col in col_list]}")
+        
         for idx, col in enumerate(col_list):
             col_name = col.get('name', '')
             col_type = col.get('type_text', '').lower()
+            col_type_name = col.get('type_name', '').lower()  # 嘗試備用類型字段
             
             # 尋找類別列（字串類型）
-            if not category_col and ('string' in col_type or 'varchar' in col_type):
+            if not category_col and ('string' in col_type or 'varchar' in col_type or 'string' in col_type_name or 'varchar' in col_type_name):
                 category_col = col_name
                 category_idx = idx
             
-            # 尋找數值列
-            if not value_col and any(t in col_type for t in ['int', 'long', 'double', 'float', 'decimal', 'bigint']):
-                value_col = col_name
-                value_idx = idx
+            # 尋找數值列 (檢查多種可能的類型標示)
+            numeric_types = ['int', 'long', 'double', 'float', 'decimal', 'bigint', 'numeric', 'number', 'money']
+            if not value_col:
+                if any(t in col_type for t in numeric_types) or any(t in col_type_name for t in numeric_types):
+                    value_col = col_name
+                    value_idx = idx
         
-        if not category_col or not value_col:
+        # 如果還是沒找到，嘗試備用策略：第一個非字符列作為數值列
+        if value_col is None and category_col is not None:
+            for idx, col in enumerate(col_list):
+                if col.get('name', '') != category_col:
+                    value_col = col.get('name', '')
+                    value_idx = idx
+                    break
+        
+        logger.debug(f"識別結果 - 類別列: {category_col} (索引{category_idx}), 數值列: {value_col} (索引{value_idx})")
+        
+        if not category_col or not value_col or category_idx is None or value_idx is None:
+            logger.warning(f"圖表分析失敗: 無法找到合適的類別列或數值列")
             return {'suitable': False}
         
         # 準備圖表數據
@@ -944,12 +986,12 @@ def process_query_results(answer_json: Dict) -> str:
     else:
         response += "無可用資料。\n\n"
     
-    # 添加建議問題
-    if "suggested_questions" in answer_json and answer_json["suggested_questions"]:
-        response += "\n---\n\n## 💡 建議問題\n\n"
-        response += "您可以繼續詢問以下問題：\n\n"
-        for idx, question in enumerate(answer_json["suggested_questions"], 1):
-            response += f"{idx}. {question}\n"
-        response += "\n*直接輸入問題編號或完整問題即可查詢*\n"
+    # 建議問題已改用 Adaptive Card 按鈕方式顯示，不再以文字形式輸出
+    # if "suggested_questions" in answer_json and answer_json["suggested_questions"]:
+    #     response += "\n---\n\n## 💡 建議問題\n\n"
+    #     response += "您可以繼續詢問以下問題：\n\n"
+    #     for idx, question in enumerate(answer_json["suggested_questions"], 1):
+    #         response += f"{idx}. {question}\n"
+    #     response += "\n*直接輸入問題編號或完整問題即可查詢*\n"
 
     return response

@@ -1,0 +1,47 @@
+{
+  "project": "DatabricksGenieBOT",
+  "analysis_date": "2026-02-08T21:50:50.913411",
+  "summary": {
+    "total_dialogs": 1,
+    "total_handlers": 3,
+    "total_activities": 2,
+    "complexity_score": 100,
+    "estimated_effort": "高 (~60+ 小時)"
+  },
+  "dialogs": [
+    {
+      "name": "sso_dialog",
+      "file_path": "bot\\dialogs\\sso_dialog.py",
+      "methods": [],
+      "dependencies": [
+        "from botbuilder.dialogs import (",
+        "from botbuilder.core import MessageFactory",
+        "from botbuilder.schema import TokenResponse",
+        "from app.core.config import DefaultConfig"
+      ]
+    }
+  ],
+  "handlers": [
+    {
+      "name": "bot",
+      "file_path": "bot\\handlers\\bot.py",
+      "methods": [],
+      "handles": [
+        "on_message_activity",
+        "on_members_added_activity"
+      ]
+    },
+    {
+      "name": "commands",
+      "file_path": "bot\\handlers\\commands.py",
+      "methods": [],
+      "handles": []
+    },
+    {
+      "name": "identity",
+      "file_path": "bot\\handlers\\identity.py",
+      "methods": [],
+      "handles": []
+    }
+  ]
+}

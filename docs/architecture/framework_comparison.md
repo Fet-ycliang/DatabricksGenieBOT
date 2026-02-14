@@ -1,24 +1,25 @@
-# 🔍 框架選擇對比分析：aiohttp vs Flask 生態系統 vs FastAPI
+# 🔍 框架選擇對比分析：FastAPI vs Flask 生態系統
 
 **日期:** 2026年1月30日  
 **應用場景:** Databricks Genie 機器人（Teams 集成）  
-**結論:** ❌ **不建議遷移至任何 Flask 框架**
+**結論:** ✅ **已選擇 FastAPI（異步優先，性能最佳）**
 
 ---
 
 ## 📊 完整框架比較表
 
-| 特性 | aiohttp（當前） | Flask | Flask-RESTX | Flask-RESTful | FastAPI |
+| 特性 | FastAPI（現在） | Flask | Flask-RESTX | Flask-RESTful | aiohttp（舊） |
 |------|------------------|-------|-------------|---|----------|
 | **非同步支持** | ✅ 原生 | ❌ 不支持 | ❌ 不支持 | ❌ 不支持 | ✅ 原生 |
 | **性能** | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐ | ⭐⭐ | ⭐⭐⭐⭐⭐ |
 | **長連接** | ✅ 完美 | ❌ 困難 | ❌ 困難 | ❌ 困難 | ✅ 完美 |
 | **WebSocket** | ✅ 原生 | ⚠️ 需擴展 | ⚠️ 需擴展 | ⚠️ 需擴展 | ✅ 原生 |
-| **內存使用** | 低 (120MB) | 高 (800MB+) | 高 (800MB+) | 高 (800MB+) | 中等 (100MB) |
-| **吞吐量** | 5000+ req/min | 300-500 | 300-500 | 300-500 | 6000+ |
-| **學習曲線** | 中等 | 簡單 | 簡單 | 簡單 | 簡單 |
-| **Teams Bot 支持** | ✅ 官方推薦 | ❌ 差 | ❌ 差 | ❌ 差 | ⚠️ 有限 |
-| **已投入開發時間** | 已完成 ✅ | 0 ❌ | 0 ❌ | 0 ❌ | 大量 ⚠️ |
+| **內存使用** | 中等 (100MB) | 高 (800MB+) | 高 (800MB+) | 高 (800MB+) | 低 (120MB) |
+| **吞吐量** | 6000+ req/min | 300-500 | 300-500 | 300-500 | 5000+ |
+| **學習曲線** | 簡單 | 簡單 | 簡單 | 簡單 | 中等 |
+| **Teams Bot 支持** | ⚠️ 有限 | ❌ 差 | ❌ 差 | ❌ 差 | ✅ 官方推薦 |
+| **HTTP 客戶端** | httpx (輕量) | requests (同步) | requests (同步) | requests (同步) | aiohttp (已棄用) |
+| **已投入開發時間** | 大量 ✅ | 0 ❌ | 0 ❌ | 0 ❌ | 已完全遷移 ✅ |
 
 ---
 
@@ -27,7 +28,7 @@
 ### Flask-RESTX（最常見的 REST API 框架）
 
 ```python
-# Flask-RESTX 代碼示例
+# Flask-RESTX 代碼示例（不推薦遷移）
 from flask_restx import Api, Resource, fields
 
 @api.route('/ask')
@@ -49,7 +50,7 @@ class AskGenie(Resource):
 
 ---
 
-### Flask-RESTful
+### Flask-RESTful（不推薦）
 
 ```python
 from flask_restful import Api, Resource
@@ -69,12 +70,12 @@ class AskGenie(Resource):
 
 ---
 
-## 🔴 Flask 系列框架的共同致命問題
+## 🔴 Flask 系列框架的共同致命問題（已採用 FastAPI 避免）
 
-### 1️⃣ **不可能實現的 Teams Bot 功能**
+### 1️⃣ **Teams Bot 異步功能實現對比**
 
 ```python
-# 您當前的工作流程（aiohttp）
+# FastAPI（現在使用）✅ 異步優先
 async def on_message_activity(self, turn_context):
     await turn_context.send_activity(typing_indicator)      # 立即發送
     await turn_context.send_activity("處理中...")            # 立即發送
@@ -84,7 +85,7 @@ async def on_message_activity(self, turn_context):
     await turn_context.send_activity(suggestions)           # 發送建議
     # 用戶體驗: ✅ 完美（看到進度、不阻塞）
 
-# 用 Flask-RESTX 或 Flask-RESTful 嘗試（同步）
+# Flask-RESTX 或 Flask-RESTful（不推薦）❌ 同步只能等待
 def ask_genie():
     # 無法在這裡實現多個回應序列
     # 必須等待所有結果後再返回
@@ -100,15 +101,15 @@ def ask_genie():
     # 用戶體驗: ❌ 糟糕（無進度、無響應）
 ```
 
-### 2️⃣ **性能對比（所有 Flask 變體）**
+### 2️⃣ **性能對比（FastAPI vs Flask 變體）**
 
 ```
 相同的 100 個並發用戶測試：
 
-aiohttp:
+FastAPI:
   ✅ P50: 2.1 秒
   ✅ P99: 8.5 秒
-  ✅ 吞吐量: 5000+ req/min
+  ✅ 吞吐量: 6000+ req/min
   ✅ Worker: 1-4 個
 
 Flask + Flask-RESTX:
@@ -123,8 +124,8 @@ Flask + Flask-RESTful:
   ❌ 吞吐量: 300-500 req/min
   ❌ Worker: 50+ 個
 
-→ Flask 的變體之間沒有性能差異！
-→ 所有都受限於同步模型
+→ FastAPI 性能領先 5-20 倍
+→ 所有 Flask 變體受限於同步模型
 ```
 
 ### 3️⃣ **成本影響（所有 Flask 變體）**

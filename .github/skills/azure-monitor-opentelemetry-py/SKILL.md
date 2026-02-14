@@ -1,39 +1,39 @@
 ---
 name: azure-monitor-opentelemetry-py
 description: |
-  Azure Monitor OpenTelemetry Distro for Python. Use for one-line Application Insights setup with auto-instrumentation.
+  Azure Monitor OpenTelemetry Distro for Python。用於一鍵設定 Application Insights 的自動檢測 (auto-instrumentation)。
   Triggers: "azure-monitor-opentelemetry", "configure_azure_monitor", "Application Insights", "OpenTelemetry distro", "auto-instrumentation".
 package: azure-monitor-opentelemetry
 ---
 
 # Azure Monitor OpenTelemetry Distro for Python
 
-One-line setup for Application Insights with OpenTelemetry auto-instrumentation.
+使用 OpenTelemetry 自動檢測進行 Application Insights 的一鍵設定。
 
-## Installation
+## 安裝
 
 ```bash
 pip install azure-monitor-opentelemetry
 ```
 
-## Environment Variables
+## 環境變數
 
 ```bash
 APPLICATIONINSIGHTS_CONNECTION_STRING=InstrumentationKey=xxx;IngestionEndpoint=https://xxx.in.applicationinsights.azure.com/
 ```
 
-## Quick Start
+## 快速開始
 
 ```python
 from azure.monitor.opentelemetry import configure_azure_monitor
 
-# One-line setup - reads connection string from environment
+# 一行設定 - 從環境變數讀取連接字串
 configure_azure_monitor()
 
-# Your application code...
+# 你的應用程式程式碼...
 ```
 
-## Explicit Configuration
+## 明確設定
 
 ```python
 from azure.monitor.opentelemetry import configure_azure_monitor
@@ -43,7 +43,7 @@ configure_azure_monitor(
 )
 ```
 
-## With Flask
+## 搭配 Flask
 
 ```python
 from flask import Flask
@@ -61,7 +61,7 @@ if __name__ == "__main__":
     app.run()
 ```
 
-## With Django
+## 搭配 Django
 
 ```python
 # settings.py
@@ -72,7 +72,7 @@ configure_azure_monitor()
 # Django settings...
 ```
 
-## With FastAPI
+## 搭配 FastAPI
 
 ```python
 from fastapi import FastAPI
@@ -87,7 +87,7 @@ async def root():
     return {"message": "Hello World"}
 ```
 
-## Custom Traces
+## 自訂追蹤 (Custom Traces)
 
 ```python
 from opentelemetry import trace
@@ -102,7 +102,7 @@ with tracer.start_as_current_span("my-operation") as span:
     # Do work...
 ```
 
-## Custom Metrics
+## 自訂指標 (Custom Metrics)
 
 ```python
 from opentelemetry import metrics
@@ -116,7 +116,7 @@ counter = meter.create_counter("my_counter")
 counter.add(1, {"dimension": "value"})
 ```
 
-## Custom Logs
+## 自訂日誌 (Custom Logs)
 
 ```python
 import logging
@@ -131,20 +131,20 @@ logger.info("This will appear in Application Insights")
 logger.error("Errors are captured too", exc_info=True)
 ```
 
-## Sampling
+## 取樣 (Sampling)
 
 ```python
 from azure.monitor.opentelemetry import configure_azure_monitor
 
-# Sample 10% of requests
+# 取樣 10% 的請求
 configure_azure_monitor(
     sampling_ratio=0.1
 )
 ```
 
-## Cloud Role Name
+## 雲端角色名稱 (Cloud Role Name)
 
-Set cloud role name for Application Map:
+為 Application Map 設定雲端角色名稱：
 
 ```python
 from azure.monitor.opentelemetry import configure_azure_monitor
@@ -155,17 +155,17 @@ configure_azure_monitor(
 )
 ```
 
-## Disable Specific Instrumentations
+## 停用特定檢測
 
 ```python
 from azure.monitor.opentelemetry import configure_azure_monitor
 
 configure_azure_monitor(
-    instrumentations=["flask", "requests"]  # Only enable these
+    instrumentations=["flask", "requests"]  # 僅啟用這些
 )
 ```
 
-## Enable Live Metrics
+## 啟用 Live Metrics
 
 ```python
 from azure.monitor.opentelemetry import configure_azure_monitor
@@ -175,7 +175,7 @@ configure_azure_monitor(
 )
 ```
 
-## Azure AD Authentication
+## Azure AD 身份驗證
 
 ```python
 from azure.monitor.opentelemetry import configure_azure_monitor
@@ -186,39 +186,39 @@ configure_azure_monitor(
 )
 ```
 
-## Auto-Instrumentations Included
+## 包含的自動檢測
 
-| Library | Telemetry Type |
-|---------|---------------|
-| Flask | Traces |
-| Django | Traces |
-| FastAPI | Traces |
-| Requests | Traces |
-| urllib3 | Traces |
-| httpx | Traces |
-| aiohttp | Traces |
-| psycopg2 | Traces |
-| pymysql | Traces |
-| pymongo | Traces |
-| redis | Traces |
+| 函式庫   | 遙測類型       |
+| -------- | -------------- |
+| Flask    | Traces (追蹤)  |
+| Django   | Traces (追蹤)  |
+| FastAPI  | Traces (追蹤)  |
+| Requests | Traces (追蹤)  |
+| urllib3  | Traces (追蹤)  |
+| httpx    | Traces (追蹤)  |
+| aiohttp  | Traces (追蹤)  |
+| psycopg2 | Traces (追蹤)  |
+| pymysql  | Traces (追蹤)  |
+| pymongo  | Traces (追蹤)  |
+| redis    | Traces (追蹤)  |
 
-## Configuration Options
+## 設定選項
 
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `connection_string` | Application Insights connection string | From env var |
-| `credential` | Azure credential for AAD auth | None |
-| `sampling_ratio` | Sampling rate (0.0 to 1.0) | 1.0 |
-| `resource` | OpenTelemetry Resource | Auto-detected |
-| `instrumentations` | List of instrumentations to enable | All |
-| `enable_live_metrics` | Enable Live Metrics stream | False |
+| 參數                  | 描述                                   | 預設值        |
+| --------------------- | -------------------------------------- | ------------- |
+| `connection_string`   | Application Insights 連接字串          | 來自環境變數  |
+| `credential`          | 用於 AAD 身份驗證的 Azure 憑證         | None          |
+| `sampling_ratio`      | 取樣率 (0.0 到 1.0)                    | 1.0           |
+| `resource`            | OpenTelemetry Resource                 | 自動偵測      |
+| `instrumentations`    | 要啟用的檢測清單                       | 全部          |
+| `enable_live_metrics` | 啟用 Live Metrics 串流                 | False         |
 
-## Best Practices
+## 最佳實踐
 
-1. **Call configure_azure_monitor() early** — Before importing instrumented libraries
-2. **Use environment variables** for connection string in production
-3. **Set cloud role name** for multi-service applications
-4. **Enable sampling** in high-traffic applications
-5. **Use structured logging** for better log analytics queries
-6. **Add custom attributes** to spans for better debugging
-7. **Use AAD authentication** for production workloads
+1. **儘早呼叫 configure_azure_monitor()** — 在匯入被檢測的函式庫之前
+2. **使用環境變數** 設定生產環境的連接字串
+3. **設定雲端角色名稱** 用於多服務應用程式
+4. **啟用取樣** 於高流量應用程式
+5. **使用結構化日誌** 以獲得更好的日誌分析查詢體驗
+6. **新增自訂屬性** 到 spans 以便於除錯
+7. **使用 AAD 身份驗證** 於生產工作負載
