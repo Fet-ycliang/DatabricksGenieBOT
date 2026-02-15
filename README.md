@@ -24,61 +24,80 @@
   - 通過 Adaptive Card 無縫顯示
   - 詳細說明請參閱 [CHART_FEATURE_GUIDE.md](CHART_FEATURE_GUIDE.md)
 
-### 📖 架構優化和最佳實踐
+### 📖 架構改善（2026-02-16 更新）
 
-本項目已進行全面的架構分析，識別了 10 個改善領域。請參閱以下指南：
+本專案已完成重大架構改善，解決了先前識別的核心問題：
 
-### 🚀 快速開始 (立即改善)
+#### ✅ 已完成的改善
 
-- **[docs/architecture/optimization.md](docs/architecture/optimization.md)** - 完整性能優化指南（實施狀態、快速開始、詳細建議）
-- **[docs/troubleshooting.md](docs/troubleshooting.md)** - 完整故障排查指南（所有常見問題和解決方案）
+1. **✅ 記憶體洩漏問題已解決** - Session 自動清理機制
+   - 實作 SessionManager 自動清理過期 sessions
+   - 4 小時閒置超時，每小時自動清理
+   - FastAPI lifespan 管理確保資源正確關閉
 
-#### 立即改善的 3 大核心問題
+2. **✅ 統一錯誤處理系統** - 結構化異常處理
+   - 25+ 錯誤碼和專用異常類別
+   - 統一的 API 錯誤回應格式
+   - 防止錯誤訊息洩漏敏感資訊
 
-1. **內存洩漏風險** ⭐⭐⭐⭐⭐ - 會話無自動清理 (24h 後 OOM)
-2. **無監控和可觀測性** ⭐⭐⭐⭐⭐ - 無法診斷性能問題
-3. **沒有 API 容錯機制** ⭐⭐⭐⭐⭐ - 偶發故障導致查詢失敗
+3. **✅ 請求追蹤和日誌系統** - 完整的可觀測性
+   - 每個請求唯一 request_id（X-Request-ID header）
+   - 結構化日誌輸出，包含 request_id, duration_ms, status_code
+   - 自動性能計時和錯誤追蹤
 
-**預期收益**: 2-3 小時工作可實現 → 99.9% 可用性 + 99.5% 成功率 + 完全可視化
+4. **✅ 認證保護** - API 安全加固
+   - Azure AD Token 驗證中介軟體
+   - 統一認證依賴注入
+   - 完整的認證文檔
 
----
+5. **✅ 代碼去重** - 提升可維護性
+   - 消除 250+ 行重複代碼
+   - 統一圖表分析邏輯（ChartAnalyzer）
 
-## 📖 架構優化和最佳實踐
+6. **✅ 架構簡化** - 移除僵屍代碼
+   - 移除實驗性 M365 Agent Framework 代碼（0% 整合度）
+   - 清晰的單一技術棧（Bot Framework SDK）
 
-本項目已進行全面的架構分析，識別了 10 個改善領域。請參閱以下指南：
-
-### 🚀 快速開始 (立即改善)
-
-- **[docs/architecture/optimization.md](docs/architecture/optimization.md)** - 3 大核心改善概述和行動計劃
-
-#### 立即改善的 3 大核心問題
-
-1. **內存洩漏風險** ⭐⭐⭐⭐⭐ - 會話無自動清理 (24h 後 OOM)
-2. **無監控和可觀測性** ⭐⭐⭐⭐⭐ - 無法診斷性能問題
-3. **沒有 API 容錯機制** ⭐⭐⭐⭐⭐ - 偶發故障導致查詢失敗
-
-**預期收益**: 2-3 小時工作可實現 → 99.9% 可用性 + 99.5% 成功率 + 完全可視化
+**相關文檔**：
+- [架構改善詳情](docs/architecture/optimization.md)
+- [故障排除指南](docs/troubleshooting.md)
+- [認證系統](docs/authentication.md)
+- [M365 移除摘要](docs/m365_removal_summary.md)
 
 ---
 
 ## 實作細節
 
-機器人使用以下技術建構：
+### 技術棧
 
-- Python
-- Bot Framework SDK
-- **Microsoft 365 Agent Framework SDK** (New!)
-- 用於非同步 HTTP 請求的 httpx
-- Databricks Genie API（公開預覽版）
+- **Python 3.11+**
+- **Bot Framework SDK** - Teams 整合
+- **FastAPI** - Web 框架
+- **httpx** - 非同步 HTTP 請求（連接池）
+- **Databricks Genie API** - AI 助理查詢
+- **Matplotlib & Seaborn** - 圖表生成
 
-系統的主要組件包括：
+### 系統主要組件
 
-- `M365AgentFramework`：統合管理所有 Skills (Mail, Calendar, OneDrive, Teams) 的核心控制器
-- `AuthenticationSkill`：處理 Microsoft Teams SSO 與 Token 管理
-- `ask_genie` 函數，處理與 Genie API 的通訊
-- `MyBot` 類別，處理傳入訊息並管理使用者對話
-- 一個 FastAPI Web 應用程式，作為機器人訊息的進入點
-- **新功能**：整合回饋系統，使用發送訊息回饋端點將使用者回饋直接發送到 Databricks Genie API
+**核心服務**：
+- `GenieService` (`app/services/genie.py`) - 封裝 Databricks Genie API 互動
+- `SessionManager` (`app/utils/session_manager.py`) - 自動管理和清理使用者 sessions
+- `ChartAnalyzer` (`app/utils/chart_analyzer.py`) - 圖表適用性分析
+
+**Bot 層**：
+- `MyBot` (`bot/handlers/bot.py`) - Bot Framework Activity Handler
+- `SSODialog` (`bot/dialogs/sso_dialog.py`) - Teams SSO 認證
+- `handle_special_commands` (`bot/handlers/commands.py`) - 命令處理
+
+**API 層**：
+- `bot_router` (`app/api/bot.py`) - `/api/messages` 端點（Bot Framework）
+- `genie_router` (`app/api/genie.py`) - `/api/genie/*` 測試端點
+- `health_router` (`app/api/health.py`) - `/health` 健康檢查
+
+**核心模組**：
+- `auth_middleware.py` - 統一認證保護（Azure AD Token）
+- `exceptions.py` - 統一異常處理系統
+- `logging_middleware.py` - 請求日誌和追蹤（request_id）
 
 ## 工作階段管理架構
 
