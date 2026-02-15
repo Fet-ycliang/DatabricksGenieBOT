@@ -48,10 +48,10 @@ class HealthCheckTester:
                     "response": data,
                     "timestamp": datetime.now().isoformat()
                 }
-                    
-                    self._print_response(status, data)
-                    self.results.append(result)
-                    return result
+
+                self._print_response(status, data)
+                self.results.append(result)
+                return result
                     
         except asyncio.TimeoutError:
             error_msg = f"⏱️  Request timeout (>{self.timeout}s)"
@@ -98,10 +98,10 @@ class HealthCheckTester:
                     "response": data,
                     "timestamp": datetime.now().isoformat()
                 }
-                    
-                    self._print_response(status, data)
-                    self.results.append(result)
-                    return result
+
+                self._print_response(status, data)
+                self.results.append(result)
+                return result
                     
         except asyncio.TimeoutError:
             error_msg = f"⏱️  Request timeout (>{self.timeout}s)"
@@ -148,10 +148,10 @@ class HealthCheckTester:
                     "response": data,
                     "timestamp": datetime.now().isoformat()
                 }
-                    
-                    self._print_response(status, data)
-                    self.results.append(result)
-                    return result
+
+                self._print_response(status, data)
+                self.results.append(result)
+                return result
                     
         except asyncio.TimeoutError:
             error_msg = f"⏱️  Request timeout (>{self.timeout}s)"
