@@ -213,5 +213,5 @@ typings/
 # POC directory (large, not for version control)
 poc/
 
-# Claude Code local settings
-.claude/
+# Claude Code local settings (keep skills/ for version control)
+.claude/settings.local.json
