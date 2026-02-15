@@ -10,11 +10,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **當前狀態**: 使用 Bot Framework SDK（已於 2026年1月5日被 Microsoft 封存 EOL）
 - **未來方向**: 計畫遷移到 Microsoft 365 Agents SDK
-- **混合架構**: 目前同時包含 Bot Framework 和初步的 M365 Agent Framework 基礎設施
 - **🔴 重要更新 (2026-02-16)**: POC 評估發現 Python SDK 尚未準備好
   - SDK 版本 0.7.0 僅包含 Activity Protocol 類型定義
   - 缺少核心 Agent Framework (AgentApplication, Storage, Adapters)
   - **建議延後遷移至 2026 Q4 或 2027 Q1**
+- **✅ M365 代碼已移除 (2026-02-16)**: 基於 POC 評估結果
+  - 移除了實驗性的 M365 Agent Framework 代碼
+  - 原因：SDK 不成熟 + 0% 整合度（僵屍代碼）
+  - 歷史文檔保留在 `migration_archive/` 和 `docs/` 目錄
+  - 將在 SDK 成熟後重新評估遷移
 - **新時間表**: 等待 Python SDK 達到 1.0+ 版本並具備完整功能
 - **參考**: 詳見 `poc/POC_STATUS.md`, `poc/FINDINGS_SUMMARY.md` 和 `docs/m365_agents_sdk_evaluation_report.md`
 
@@ -64,7 +68,6 @@ python scripts/diagnose.py
 - **bot.py**: 處理 Bot Framework 的 `/api/messages` 端點
 - **genie.py**: Genie 查詢的直接 API 端點（測試用）
 - **health.py**: 健康檢查端點
-- **m365_agent.py**: Microsoft 365 Agent 整合端點
 
 ### 服務層 (app/services/)
 - **genie.py**:
@@ -80,15 +83,18 @@ python scripts/diagnose.py
 
 ### 核心元件 (app/core/)
 - **config.py**: 環境變數和配置管理（DefaultConfig 類別）
-- **m365_agent_framework.py**: Microsoft 365 Agent Framework 協調器
+- **adapter.py**: Bot Framework Adapter 配置
+- **auth_middleware.py**: 統一認證中介軟體（Azure AD Token 驗證）
+- **exceptions.py**: 統一異常處理系統（錯誤碼和異常類別）
+- **logging_middleware.py**: 請求日誌和追蹤中介軟體（request_id 生成）
 
 ### Bot Cards (bot/cards/)
 - Adaptive Cards 生成邏輯
 - 圖表生成器（使用 matplotlib/seaborn）
 
-## 架構狀態：Bot Framework + M365 混合架構
+## 當前架構：Bot Framework SDK
 
-### 當前訊息處理流程
+### 訊息處理流程
 
 ```
 Teams 訊息
@@ -99,29 +105,34 @@ MyBot (ActivityHandler) (bot/handlers/bot.py)
     ↓
 ├─ SSO 認證 (bot/dialogs/sso_dialog.py) - Bot Framework Dialog
 ├─ 命令處理 (bot/handlers/commands.py)
-├─ Genie 查詢 (app/services/genie.py)
-└─ (可選) M365 Agent Framework - 目前未在主流程中使用
+└─ Genie 查詢 (app/services/genie.py)
+       ↓
+    Databricks Genie API
 ```
 
-### M365 Agent Framework 現狀
+### 核心改善（2026-02-16）
 
-**已實作的元件**：
-- `app/core/m365_agent_framework.py` - Framework 協調器 ✓
-- `app/services/m365_agent.py` - Graph API 客戶端 ✓
-- `app/api/m365_agent.py` - M365 專用 API 端點 ✓
+**已實作的架構改善**：
+1. ✅ **認證保護** (`app/core/auth_middleware.py`)
+   - Azure AD Token 驗證
+   - 統一認證依賴注入
 
-**目前狀態**：
-- M365 Framework 僅作為額外的 API 端點存在
-- Bot 主要邏輯仍使用 Bot Framework SDK
-- Skills 已被停用並移至 Agent Skills 系統
+2. ✅ **Session 管理** (`app/utils/session_manager.py`)
+   - 自動清理過期 sessions（防止記憶體洩漏）
+   - 4 小時閒置超時
 
-**遷移計畫**：
-1. **階段 1（進行中）**: 建立 M365 SDK POC，驗證功能完整性
-2. **階段 2**: 記錄當前架構，標記技術債務
-3. **階段 3**: 等待 M365 SDK 達到 1.0 穩定版
-4. **階段 4**: 執行完整遷移（預計 Q2-Q3 2026）
+3. ✅ **統一錯誤處理** (`app/core/exceptions.py`)
+   - 25+ 錯誤碼和專用異常類別
+   - 結構化錯誤回應
 
-詳見：`docs/m365_agents_sdk_poc_plan.md`
+4. ✅ **請求追蹤** (`app/core/logging_middleware.py`)
+   - 每個請求唯一 request_id
+   - 結構化日誌輸出
+   - 自動性能計時
+
+5. ✅ **代碼去重** (`app/utils/chart_analyzer.py`)
+   - 消除 250+ 行重複代碼
+   - 統一圖表分析邏輯
 
 ### Bot Framework SDK 的 EOL 狀態
 
@@ -129,7 +140,12 @@ MyBot (ActivityHandler) (bot/handlers/bot.py)
 - **支援結束**: 2025年12月31日
 - **影響**: 不會收到安全更新或功能更新
 - **風險等級**: 中等（短期內仍可運作）
-- **建議**: 在 2026 Q2-Q3 完成遷移到 M365 Agents SDK
+- **遷移計畫**: 等待 M365 Agents SDK Python 版本成熟（目標：2026 Q4 或 2027 Q1）
+
+**M365 代碼狀態**：
+- ❌ 實驗性 M365 Agent Framework 代碼已移除（2026-02-16）
+- 原因：Python SDK 0.7.0 不成熟，缺少核心功能
+- 歷史文檔保留在 `migration_archive/` 和 `docs/m365_agents_sdk_evaluation_report.md`
 
 ## 關鍵設計決策
 

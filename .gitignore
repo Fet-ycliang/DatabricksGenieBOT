@@ -209,3 +209,9 @@ __marimo__/
 typings/
 .azure/
 .env.example
+
+# POC directory (large, not for version control)
+poc/
+
+# Claude Code local settings
+.claude/
