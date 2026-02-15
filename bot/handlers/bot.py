@@ -6,6 +6,8 @@ from botbuilder.dialogs import Dialog, DialogSet, DialogTurnStatus
 from app.core.config import DefaultConfig
 from app.services.genie import GenieService
 from app.models.user_session import UserSession, is_conversation_timed_out
+from app.utils.chart_analyzer import ChartAnalyzer
+from app.utils.email_extractor import EmailExtractor
 from bot.handlers.commands import handle_special_commands
 from bot.cards.welcome_messages import build_authenticated_welcome, build_unauthenticated_welcome
 from bot.cards.feedback_cards import create_error_card, create_thank_you_card, send_feedback_card
@@ -17,8 +19,6 @@ import logging
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-from app.core.m365_agent_framework import M365AgentFramework
-
 logger = logging.getLogger(__name__)
 
 class MyBot(ActivityHandler):
@@ -29,14 +29,12 @@ class MyBot(ActivityHandler):
         conversation_state: ConversationState,
         user_state: UserState,
         dialog: Dialog,
-        m365_agent_framework: Optional[M365AgentFramework] = None
     ):
         self.config = config
         self.genie_service = genie_service
         self.conversation_state = conversation_state
         self.user_state = user_state
         self.dialog = dialog
-        self.m365_agent_framework = m365_agent_framework
         self.dialog_set = DialogSet(self.conversation_state.create_property("DialogState"))
         self.dialog_set.add(self.dialog)
 
@@ -197,31 +195,16 @@ class MyBot(ActivityHandler):
             token_response = result.result
             if token_response and token_response.token:
                 user_id = turn_context.activity.from_property.id
-                
 
-
-                # Create user session from token
-                # In a real scenario, use graph to get email:
-                # email = await get_user_email(token_response.token)
-                
-                # For now, we simulate or try to get from context if available
-                # or just use a placeholder until graph skill is integrated
+                # 使用混合策略取得用戶 email
+                # 優先級：JWT Token → Activity Channel Data → Graph API → Placeholder
                 name = turn_context.activity.from_property.name or "User"
-                email = f"{name}@example.com" # Placeholder if we don't call Graph
-                
-                # Try to get real email if framework is available
-                if self.m365_agent_framework:
-                    try:
-                        profile = await self.m365_agent_framework.m365_service.get_user_profile(
-                            user_id="me", 
-                            token=token_response.token
-                        )
-                        if profile and "mail" in profile:
-                            email = profile["mail"]
-                        elif profile and "userPrincipalName" in profile:
-                            email = profile["userPrincipalName"]
-                    except Exception as ex:
-                        print(f"Failed to fetch profile: {ex}")
+                email = await EmailExtractor.get_email(
+                    turn_context,
+                    token_response,
+                    fallback_name=name,
+                    use_graph_api=True  # 可透過環境變數控制
+                )
 
                 # Create Session
                 session = UserSession(user_id, email, name)
@@ -301,7 +284,7 @@ class MyBot(ActivityHandler):
                     logger.debug(f"列信息: {response_data.get('columns')}")
                     logger.debug(f"數據行數: {len(response_data.get('data', {}).get('data_array', []))}")
                     
-                    chart_info = self._analyze_chart_suitability(response_data["columns"], response_data["data"])
+                    chart_info = ChartAnalyzer.analyze_suitability(response_data["columns"], response_data["data"])
                     if chart_info.get('suitable'):
                         response_data['chart_info'] = chart_info
                         logger.info(f"✅ 圖表適用: {chart_info.get('chart_type')} 圖 (類別: {chart_info.get('category_column')}, 數值: {chart_info.get('value_column')})")
@@ -413,130 +396,3 @@ class MyBot(ActivityHandler):
     async def _get_user_session(self, turn_context: TurnContext) -> Optional[UserSession]:
         user_id = turn_context.activity.from_property.id
         return self.user_sessions.get(user_id)
-    def _analyze_chart_suitability(self, columns: dict, data: dict) -> dict:
-        """分析數據是否適合繪製圖表並返回建議的圖表類型
-        
-        Returns:
-            dict: {
-                'suitable': bool,
-                'chart_type': str,  # 'bar', 'pie', 'line'
-                'category_column': str,
-                'value_column': str,
-                'data_for_chart': list
-            }
-        """
-        try:
-            if not columns or not data:
-                return {'suitable': False}
-            
-            # 獲取列信息
-            col_list = columns.get('columns', [])
-            if len(col_list) < 2:
-                return {'suitable': False}
-            
-            # 獲取數據行
-            data_array = data.get('data_array', [])
-            if not data_array or len(data_array) < 2:
-                # 太少數據不適合圖表
-                return {'suitable': False}
-            
-            # 限制圖表數據點的數量（超過50條時只取前50條）
-            if len(data_array) > 50:
-                data_array = data_array[:50]
-            
-            # 分析列類型
-            category_col = None
-            value_col = None
-            category_idx = None
-            value_idx = None
-            
-            # 先檢查列的信息用於調試
-            logger.debug(f"分析圖表 - 列信息: {[col.get('name', '') for col in col_list]}")
-            logger.debug(f"列類型信息: {[col.get('type_text', '') for col in col_list]}")
-            logger.debug(f"列 type_name 信息: {[col.get('type_name', '') for col in col_list]}")
-            
-            for idx, col in enumerate(col_list):
-                col_name = col.get('name', '')
-                col_type = col.get('type_text', '').lower()
-                col_type_name = col.get('type_name', '').lower()  # 嘗試備用類型字段
-                
-                logger.debug(f"  列 {idx}: {col_name} | type_text='{col_type}' | type_name='{col_type_name}'")
-                
-                # 尋找類別列（字串類型）
-                if not category_col and ('string' in col_type or 'varchar' in col_type or 'string' in col_type_name or 'varchar' in col_type_name):
-                    category_col = col_name
-                    category_idx = idx
-                    logger.debug(f"    ✓ 識別為類別列")
-                
-                # 尋找數值列 (檢查多種可能的類型標示)
-                numeric_types = ['int', 'long', 'double', 'float', 'decimal', 'bigint', 'numeric', 'number', 'money']
-                if not value_col:
-                    if any(t in col_type for t in numeric_types) or any(t in col_type_name for t in numeric_types):
-                        value_col = col_name
-                        value_idx = idx
-                        logger.debug(f"    ✓ 識別為數值列")
-            
-            # 如果還是沒找到，嘗試備用策略：第一個非字符列作為數值列
-            if value_col is None and category_col is not None:
-                logger.debug(f"未找到數值列，使用備用策略...")
-                for idx, col in enumerate(col_list):
-                    if col.get('name', '') != category_col:
-                        value_col = col.get('name', '')
-                        value_idx = idx
-                        logger.debug(f"  備用策略: 選擇列 {idx} ({value_col}) 作為數值列")
-                        break
-            
-            logger.debug(f"識別結果 - 類別列: {category_col} (索引{category_idx}), 數值列: {value_col} (索引{value_idx})")
-            
-            if not category_col or not value_col or category_idx is None or value_idx is None:
-                logger.warning(f"圖表分析失敗: 無法找到合適的類別列或數值列 (category={category_col}, value={value_col})")
-                return {'suitable': False}
-            
-            # 準備圖表數據
-            chart_data = []
-            has_negative = False
-            total_value = 0
-            
-            for row in data_array:
-                if len(row) > max(category_idx, value_idx):
-                    category = str(row[category_idx]) if row[category_idx] is not None else 'N/A'
-                    value = row[value_idx]
-                    
-                    # 跳過 None 值
-                    if value is None:
-                        continue
-                    
-                    try:
-                        value = float(value)
-                        if value < 0:
-                            has_negative = True
-                        total_value += abs(value)
-                        chart_data.append({'category': category, 'value': value})
-                    except (ValueError, TypeError):
-                        continue
-            
-            if len(chart_data) < 2:
-                return {'suitable': False}
-            
-            # 決定圖表類型
-            chart_type = 'bar'  # 默認使用長條圖
-            
-            # 如果沒有負值且類別數量適中（2-8個），可以用圓餅圖
-            if not has_negative and 2 <= len(chart_data) <= 8:
-                chart_type = 'pie'
-            
-            # 如果類別看起來像時間序列（包含日期、月份等關鍵字），用折線圖
-            if any(keyword in category_col.lower() for keyword in ['date', 'time', 'month', 'year', 'day', '日期', '時間', '月份', '年']):
-                chart_type = 'line'
-            
-            return {
-                'suitable': True,
-                'chart_type': chart_type,
-                'category_column': category_col,
-                'value_column': value_col,
-                'data_for_chart': chart_data
-            }
-            
-        except Exception as e:
-            logger.error(f"分析圖表適用性時發生錯誤: {e}")
-            return {'suitable': False}
