@@ -15,6 +15,9 @@ WORKDIR /app
 # Enable bytecode compilation
 ENV UV_COMPILE_BYTECODE=1
 
+# Override index to use PyPI directly (uv.lock may contain internal Nexus URLs)
+ENV UV_INDEX_URL=https://pypi.org/simple/
+
 # Copy the lockfile and pyproject.toml to install dependencies
 COPY pyproject.toml uv.lock ./
 
