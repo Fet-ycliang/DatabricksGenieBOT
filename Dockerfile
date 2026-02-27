@@ -1,7 +1,13 @@
 FROM python:3.11-slim
 
+# Install CJK fonts for Matplotlib chart generation
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends fonts-noto-cjk && \
+    rm -rf /var/lib/apt/lists/* && \
+    fc-cache -fv
+
 # Install uv from the official image
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.6.12 /uv /bin/uv
 
 # Set the working directory
 WORKDIR /app
@@ -28,4 +34,4 @@ ENV PATH="/app/.venv/bin:$PATH"
 EXPOSE 8000
 
 # Run the application
-CMD ["fastapi", "run", "app/main.py", "--port", "8000", "--host", "0.0.0.0"]
+CMD ["uvicorn", "app.main:app", "--port", "8000", "--host", "0.0.0.0"]

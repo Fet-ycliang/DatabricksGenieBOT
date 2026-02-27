@@ -7,40 +7,41 @@ import json
 from app.services.genie import GenieService
 from app.core.config import DefaultConfig
 from app.models.user_session import UserSession
+from app.core.auth_middleware import get_current_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 config = DefaultConfig()
 
-# Dependency to get GenieService
-def get_genie_service():
-    service = GenieService(config)
-    try:
-        yield service
-    finally:
-        # In a real app we might want to keep the session open or close it
-        # depending on how GenieService manages httpx session
-        pass 
-        # await service.close() # Logic is in on_shutdown
+
+def get_genie_service() -> GenieService:
+    """取得 GenieService 單例（來自 bot_instance）"""
+    from app.bot_instance import GENIE_SERVICE
+    return GENIE_SERVICE
+
 
 class ChatRequest(BaseModel):
     query: str
-    user_email: str
+    user_email: Optional[str] = None  # 已棄用，從 token 取得；保留向後相容
     conversation_id: Optional[str] = None
-    space_id: Optional[str] = None
 
 @router.post("/chat")
-async def chat(request: ChatRequest, service: GenieService = Depends(get_genie_service)):
+async def chat(
+    request: ChatRequest,
+    service: GenieService = Depends(get_genie_service),
+    current_user: dict = Depends(get_current_user)
+):
     """
     Send a query to Genie.
     """
-    space_id = request.space_id or config.DATABRICKS_SPACE_ID
+    space_id = config.DATABRICKS_SPACE_ID
     if not space_id:
         raise HTTPException(status_code=400, detail="Space ID not configured")
 
-    # Create a temporary user session for this request
-    # In production, this should come from Auth middleware (e.g. JWT)
-    user_session = UserSession(request.user_email, request.user_email)
+    user_email = current_user["email"]
+    user_id = current_user["user_id"]
+    user_name = current_user.get("name") or user_email
+    user_session = UserSession(user_id, user_email, user_name)
     user_session.conversation_id = request.conversation_id
 
     try:
@@ -50,7 +51,7 @@ async def chat(request: ChatRequest, service: GenieService = Depends(get_genie_s
             user_session=user_session,
             conversation_id=request.conversation_id
         )
-        
+
         # 日誌記錄回應信息
         try:
             response_data = json.loads(response_payload)
@@ -62,16 +63,14 @@ async def chat(request: ChatRequest, service: GenieService = Depends(get_genie_s
             elif "data" in response_data:
                 data_count = len(response_data.get("data", {}).get("data_array", []))
                 logger.info(f"📊 返回資料結果 (筆數: {data_count})")
-        except:
-            logger.debug(f"無法解析回應內容")
-        
+        except Exception:
+            logger.debug("無法解析回應內容")
+
         return {
             "conversation_id": conversation_id,
             "message_id": message_id,
-            "response": response_payload 
-            # Note: response_payload is a JSON string, we might want to parse it
-            # but for now returning as is or parsed
+            "response": response_payload
         }
     except Exception as e:
         logger.error(f"❌ Genie API 調用失敗 - 問題: {request.query[:60]}... - 錯誤: {str(e)[:200]}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Genie 查詢處理失敗，請稍後再試")

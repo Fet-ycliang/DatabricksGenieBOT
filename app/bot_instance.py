@@ -2,6 +2,7 @@ from botbuilder.core import MemoryStorage, ConversationState, UserState
 from app.core.config import DefaultConfig
 from app.core.adapter import ADAPTER
 from app.services.genie import GenieService
+from app.services.graph import GraphService
 from app.utils.session_manager import SessionManager
 from bot.handlers.bot import MyBot
 from bot.dialogs.sso_dialog import SSODialog
@@ -18,6 +19,9 @@ DIALOG = SSODialog(CONFIG.CONNECTION_NAME)
 
 # Create Genie Service
 GENIE_SERVICE = GenieService(CONFIG)
+
+# Create Graph Service
+GRAPH_SERVICE = GraphService(CONFIG)
 
 # Create Bot
 BOT = MyBot(CONFIG, GENIE_SERVICE, CONVERSATION_STATE, USER_STATE, DIALOG)

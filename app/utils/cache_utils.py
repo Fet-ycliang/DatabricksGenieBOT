@@ -4,10 +4,12 @@
 提供 LRU 快取機制，用於優化查詢和圖表生成效能。
 """
 
+import asyncio
 import hashlib
 import logging
+import threading
 from typing import Any, Optional, Callable
-from functools import lru_cache, wraps
+from functools import wraps
 from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
@@ -59,6 +61,7 @@ class SimpleCache:
     - TTL（Time To Live）支援
     - 容量限制（LRU 驅逐策略）
     - 統計資訊追蹤
+    - threading.Lock 保護內部狀態（支援 sync 和 async 環境）
     """
 
     def __init__(self, max_size: int = 100, ttl_seconds: int = 3600):
@@ -73,6 +76,7 @@ class SimpleCache:
         self.ttl_seconds = ttl_seconds
         self._cache = {}  # key -> (value, timestamp)
         self._access_order = []  # LRU tracking
+        self._lock = threading.Lock()
         self.stats = CacheStats()
 
     def _is_expired(self, timestamp: datetime) -> bool:
@@ -80,7 +84,7 @@ class SimpleCache:
         return datetime.now() - timestamp > timedelta(seconds=self.ttl_seconds)
 
     def _evict_lru(self):
-        """驅逐最少使用的項目"""
+        """驅逐最少使用的項目（呼叫者必須持有 _lock）"""
         if self._access_order:
             lru_key = self._access_order.pop(0)
             if lru_key in self._cache:
@@ -98,29 +102,30 @@ class SimpleCache:
         Returns:
             快取的值，如果不存在或已過期則返回 None
         """
-        if key not in self._cache:
-            self.stats.record_miss()
-            return None
+        with self._lock:
+            if key not in self._cache:
+                self.stats.record_miss()
+                return None
 
-        value, timestamp = self._cache[key]
+            value, timestamp = self._cache[key]
 
-        # 檢查是否過期
-        if self._is_expired(timestamp):
-            del self._cache[key]
+            # 檢查是否過期
+            if self._is_expired(timestamp):
+                del self._cache[key]
+                if key in self._access_order:
+                    self._access_order.remove(key)
+                self.stats.record_miss()
+                logger.debug(f"快取項目已過期: {key[:32]}...")
+                return None
+
+            # 更新訪問順序（移到最後）
             if key in self._access_order:
                 self._access_order.remove(key)
-            self.stats.record_miss()
-            logger.debug(f"快取項目已過期: {key[:32]}...")
-            return None
+            self._access_order.append(key)
 
-        # 更新訪問順序（移到最後）
-        if key in self._access_order:
-            self._access_order.remove(key)
-        self._access_order.append(key)
-
-        self.stats.record_hit()
-        logger.debug(f"快取命中: {key[:32]}...")
-        return value
+            self.stats.record_hit()
+            logger.debug(f"快取命中: {key[:32]}...")
+            return value
 
     def set(self, key: str, value: Any):
         """
@@ -130,32 +135,35 @@ class SimpleCache:
             key: 快取鍵
             value: 要快取的值
         """
-        # 如果快取已滿，驅逐 LRU
-        if len(self._cache) >= self.max_size and key not in self._cache:
-            self._evict_lru()
+        with self._lock:
+            # 如果快取已滿，驅逐 LRU
+            if len(self._cache) >= self.max_size and key not in self._cache:
+                self._evict_lru()
 
-        # 設定新值
-        self._cache[key] = (value, datetime.now())
+            # 設定新值
+            self._cache[key] = (value, datetime.now())
 
-        # 更新訪問順序
-        if key in self._access_order:
-            self._access_order.remove(key)
-        self._access_order.append(key)
+            # 更新訪問順序
+            if key in self._access_order:
+                self._access_order.remove(key)
+            self._access_order.append(key)
 
-        logger.debug(f"快取設定: {key[:32]}... (size: {len(self._cache)}/{self.max_size})")
+            logger.debug(f"快取設定: {key[:32]}... (size: {len(self._cache)}/{self.max_size})")
 
     def clear(self):
         """清空快取"""
-        self._cache.clear()
-        self._access_order.clear()
+        with self._lock:
+            self._cache.clear()
+            self._access_order.clear()
         logger.info("快取已清空")
 
     def get_stats(self) -> dict:
         """取得快取統計資訊"""
-        stats = self.stats.to_dict()
-        stats["current_size"] = len(self._cache)
-        stats["max_size"] = self.max_size
-        stats["ttl_seconds"] = self.ttl_seconds
+        with self._lock:
+            stats = self.stats.to_dict()
+            stats["current_size"] = len(self._cache)
+            stats["max_size"] = self.max_size
+            stats["ttl_seconds"] = self.ttl_seconds
         return stats
 
 
@@ -195,6 +203,9 @@ def generate_cache_key(*args, **kwargs) -> str:
 _query_cache = SimpleCache(max_size=50, ttl_seconds=3600)  # 查詢快取：1 小時
 _chart_cache = SimpleCache(max_size=30, ttl_seconds=1800)  # 圖表快取：30 分鐘
 
+# asyncio.Lock 保護 async 裝飾器的 check-await-set 序列
+_query_cache_async_lock = asyncio.Lock()
+
 
 def get_query_cache() -> SimpleCache:
     """取得查詢快取實例"""
@@ -210,7 +221,8 @@ def cached_query(func: Callable) -> Callable:
     """
     查詢結果快取裝飾器
 
-    自動快取函數結果，基於函數參數生成快取鍵。
+    使用 asyncio.Lock 保護 check → execute → set 的完整序列，
+    避免相同查詢在 cache miss 時被重複執行。
 
     Example:
         ```python
@@ -222,23 +234,30 @@ def cached_query(func: Callable) -> Callable:
     """
     @wraps(func)
     async def wrapper(*args, **kwargs):
-        # 生成快取鍵
         cache_key = generate_cache_key(func.__name__, *args, **kwargs)
 
-        # 嘗試從快取取得
+        # 先不拿鎖做快速檢查（cache hit 不需要鎖）
         cached_result = _query_cache.get(cache_key)
         if cached_result is not None:
             logger.info(f"使用快取的查詢結果: {func.__name__}")
             return cached_result
 
-        # 執行實際查詢
-        result = await func(*args, **kwargs)
+        # Cache miss：加鎖防止 thundering herd
+        async with _query_cache_async_lock:
+            # Double-check：可能在等鎖期間已被其他 coroutine 填入
+            cached_result = _query_cache.get(cache_key)
+            if cached_result is not None:
+                logger.info(f"使用快取的查詢結果（等鎖後命中）: {func.__name__}")
+                return cached_result
 
-        # 儲存到快取
-        if result is not None:
-            _query_cache.set(cache_key, result)
+            # 執行實際查詢
+            result = await func(*args, **kwargs)
 
-        return result
+            # 儲存到快取
+            if result is not None:
+                _query_cache.set(cache_key, result)
+
+            return result
 
     return wrapper
 
@@ -247,7 +266,7 @@ def cached_chart(func: Callable) -> Callable:
     """
     圖表生成快取裝飾器
 
-    自動快取生成的圖表，避免重複渲染。
+    同步裝飾器，SimpleCache 內部已有 threading.Lock 保護。
 
     Example:
         ```python

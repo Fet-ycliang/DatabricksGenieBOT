@@ -21,7 +21,6 @@ class DefaultConfig:
     APP_ID = os.getenv("APP_ID", "")  # Empty for emulator testing, set for production
     APP_PASSWORD = os.getenv("APP_PASSWORD", "")  # Empty for emulator testing, set for production
     APP_TYPE = os.getenv("APP_TYPE", "SingleTenant")  # "SingleTenant" or "MultiTenant"
-    APP_TYPE = os.getenv("APP_TYPE", "SingleTenant")  # "SingleTenant" or "MultiTenant"
     APP_TENANTID = os.getenv("APP_TENANTID", "")
     CONNECTION_NAME = os.getenv("CONNECTION_NAME", "MyTeamsSSOConnection")
     
@@ -51,6 +50,9 @@ class DefaultConfig:
     # Timezone configuration for user-facing timestamps
     TIMEZONE = os.getenv("TIMEZONE", "Asia/Taipei")
     
+    # Graph API settings
+    ENABLE_GRAPH_API_AUTO_LOGIN = os.getenv("ENABLE_GRAPH_API_AUTO_LOGIN", "False").lower() == "true"
+
     # Feedback settings
     ENABLE_FEEDBACK_CARDS = os.getenv("ENABLE_FEEDBACK_CARDS", "True").lower() == "true"
     ENABLE_GENIE_FEEDBACK_API = os.getenv("ENABLE_GENIE_FEEDBACK_API", "True").lower() == "true"

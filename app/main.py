@@ -42,7 +42,7 @@ async def lifespan(app: FastAPI):
     - GenieService: HTTP 連接池管理
     """
     # Import here to avoid circular dependency
-    from app.bot_instance import SESSION_MANAGER, GENIE_SERVICE
+    from app.bot_instance import SESSION_MANAGER, GENIE_SERVICE, GRAPH_SERVICE
 
     logger.info("========================================")
     logger.info("應用程式啟動中...")
@@ -79,6 +79,13 @@ async def lifespan(app: FastAPI):
         logger.info("✅ GenieService HTTP Session 已關閉")
     except Exception as e:
         logger.error(f"❌ GenieService 關閉失敗: {e}")
+
+    # 關閉 GraphService HTTP Client
+    try:
+        await GRAPH_SERVICE.close()
+        logger.info("✅ GraphService HTTP Client 已關閉")
+    except Exception as e:
+        logger.error(f"❌ GraphService 關閉失敗: {e}")
 
     logger.info("========================================")
     logger.info("應用程式已關閉")

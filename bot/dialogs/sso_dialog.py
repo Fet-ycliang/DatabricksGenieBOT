@@ -6,9 +6,7 @@ from botbuilder.dialogs import (
     WaterfallStepContext,
     DialogTurnResult
 )
-from botbuilder.core import MessageFactory
 from botbuilder.schema import TokenResponse
-from app.core.config import DefaultConfig
 
 class SSODialog(ComponentDialog):
     def __init__(self, connection_name: str):

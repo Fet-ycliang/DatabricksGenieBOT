@@ -3,10 +3,22 @@ import httpx
 from botbuilder.core import TurnContext
 from botbuilder.schema import Activity, ActivityTypes
 
+from bot.cards.constants import ADAPTIVE_CARD_VERSION
+
+
 class GraphService:
     def __init__(self, config):
         self.config = config
         self.base_url = "https://graph.microsoft.com/v1.0"
+        self._http_client = httpx.AsyncClient(
+            timeout=httpx.Timeout(timeout=30.0, connect=5.0, read=10.0, write=10.0),
+            headers={"Accept": "application/json"},
+        )
+
+    async def close(self):
+        """關閉共享 HTTP client（應用程式關閉時調用）"""
+        if self._http_client and not self._http_client.is_closed:
+            await self._http_client.aclose()
 
     async def get_user_token(self, turn_context: TurnContext) -> Any:
         # This assumes the bot is authenticated and can get token via adapter
@@ -29,21 +41,14 @@ class GraphService:
         return None
 
     async def get_user_email_and_id(self, turn_context: TurnContext) -> Dict[str, str]:
-        # Try to get from channel data
+        """從 activity 中提取基本使用者資訊。完整資料透過 Graph API 取得。"""
         activity = turn_context.activity
         user_id = activity.from_property.id
-        email = None
-        
-        # Check standard properties
-        if hasattr(activity.from_property, "aad_object_id"):
-             # email might not be there directly
-             pass
-             
-        # Just return basic info found in activity, real profile fetch is done via graph
+
         return {
             "id": user_id,
             "name": activity.from_property.name,
-            "email": None # Will be filled by graph
+            "email": None  # Will be filled by graph
         }
 
     async def get_user_profile(self, access_token: str) -> Dict[str, Any]:
@@ -52,17 +57,16 @@ class GraphService:
             "Authorization": f"Bearer {access_token}",
             "Content-Type": "application/json"
         }
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(url, headers=headers)
-            if resp.status_code == 200:
-                return resp.json()
+        resp = await self._http_client.get(url, headers=headers)
+        if resp.status_code == 200:
+            return resp.json()
         return {}
 
     @staticmethod
     def create_user_profile_card(user_details: Dict[str, Any]) -> Dict[str, Any]:
         return {
             "type": "AdaptiveCard",
-            "version": "1.3",
+            "version": ADAPTIVE_CARD_VERSION,
             "body": [
                 {
                     "type": "TextBlock",

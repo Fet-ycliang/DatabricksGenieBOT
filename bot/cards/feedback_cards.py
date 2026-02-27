@@ -1,4 +1,7 @@
-"""Adaptive Card builders for feedback collection."""
+"""Adaptive Card builders for feedback collection.
+
+使用統一的 Card 構建器和常數，提供更好的視覺設計。
+"""
 
 from __future__ import annotations
 
@@ -9,73 +12,73 @@ from botbuilder.core import TurnContext
 from botbuilder.schema import Activity, ActivityTypes
 
 from app.models.user_session import UserSession
+from bot.cards.card_builder import CardBuilder
+from bot.cards.constants import (
+    ADAPTIVE_CARD_CONTENT_TYPE,
+    EMOJI_ERROR,
+    EMOJI_SUCCESS,
+    EMOJI_THUMBS_DOWN,
+    EMOJI_THUMBS_UP,
+)
 
 
 def create_feedback_card(message_id: str, user_id: str) -> Dict:
-    return {
-        "type": "AdaptiveCard",
-        "version": "1.3",
-        "body": [
-            {
-                "type": "TextBlock",
-                "text": "這個回應有幫助嗎？",
-                "size": "Small",
-                "color": "Default",
-            }
-        ],
-        "actions": [
-            {
-                "type": "Action.Submit",
-                "title": "👍",
-                "data": {
-                    "action": "feedback",
-                    "messageId": message_id,
-                    "userId": user_id,
-                    "feedback": "positive",
-                },
+    """建立回饋收集 Adaptive Card。"""
+    body = [
+        CardBuilder.separator(),
+        CardBuilder.text_block(
+            "這個回應有幫助嗎？",
+            size="Small",
+            is_subtle=True,
+        ),
+    ]
+
+    actions = [
+        CardBuilder.action_submit(
+            title=EMOJI_THUMBS_UP,
+            data={
+                "action": "feedback",
+                "messageId": message_id,
+                "userId": user_id,
+                "feedback": "positive",
             },
-            {
-                "type": "Action.Submit",
-                "title": "👎",
-                "data": {
-                    "action": "feedback",
-                    "messageId": message_id,
-                    "userId": user_id,
-                    "feedback": "negative",
-                },
+        ),
+        CardBuilder.action_submit(
+            title=EMOJI_THUMBS_DOWN,
+            data={
+                "action": "feedback",
+                "messageId": message_id,
+                "userId": user_id,
+                "feedback": "negative",
             },
-        ],
-    }
+        ),
+    ]
+
+    return CardBuilder.create_card(body=body, actions=actions)
 
 
 def create_thank_you_card() -> Dict:
-    return {
-        "type": "AdaptiveCard",
-        "version": "1.3",
-        "body": [
-            {
-                "type": "TextBlock",
-                "text": "✅ 感謝您的回饋！",
-                "size": "Small",
-                "color": "Good",
-            }
-        ],
-    }
+    """建立回饋感謝 Adaptive Card。"""
+    body = [
+        CardBuilder.text_block(
+            f"{EMOJI_SUCCESS} 感謝您的回饋！",
+            size="Small",
+            color="Good",
+        ),
+    ]
+    return CardBuilder.create_card(body=body)
 
 
 def create_error_card(error_message: str) -> Dict:
-    return {
-        "type": "AdaptiveCard",
-        "version": "1.3",
-        "body": [
-            {
-                "type": "TextBlock",
-                "text": f"❌ {error_message}",
-                "size": "Small",
-                "color": "Attention",
-            }
-        ],
-    }
+    """建立回饋錯誤 Adaptive Card。"""
+    body = [
+        CardBuilder.text_block(
+            f"{EMOJI_ERROR} {error_message}",
+            size="Small",
+            color="Attention",
+        ),
+    ]
+    return CardBuilder.create_card(body=body)
 
 
 async def send_feedback_card(
@@ -83,6 +86,7 @@ async def send_feedback_card(
     user_session: UserSession,
     enable_feedback_cards: bool,
 ) -> None:
+    """發送回饋收集卡片。"""
     if not enable_feedback_cards:
         return
 
@@ -97,7 +101,7 @@ async def send_feedback_card(
         type=ActivityTypes.message,
         attachments=[
             {
-                "contentType": "application/vnd.microsoft.card.adaptive",
+                "contentType": ADAPTIVE_CARD_CONTENT_TYPE,
                 "content": feedback_card,
             }
         ],
