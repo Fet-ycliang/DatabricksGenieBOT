@@ -29,16 +29,7 @@ dependencies = [
 dev-dependencies = [
     "pytest>=7.0.0",
 ]
-index-url = "https://nexus01p.fareastone.com.tw:8081/repository/pypi-proxy/simple"
-extra-index-url = [
-    "https://nexus01p.fareastone.com.tw:8081/repository/pypi-proxy/simple",
-]
-allow-insecure-host = [
-    "pypi.python.org",
-    "pypi.org",
-    "files.pythonhosted.org",
-    "nexus01p.fareastone.com.tw",
-]
+# 私有 PyPI mirror 設定已移至 uv.toml（gitignored），雲端部署使用 PyPI 官方源
 
 [build-system]
 requires = ["hatchling"]

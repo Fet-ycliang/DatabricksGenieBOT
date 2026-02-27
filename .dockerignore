@@ -29,8 +29,13 @@ coverage.xml
 .antigravity/
 logs/
 .env
+.env.*
 .vscode/
 .idea/
 docs/
 tests/
 scripts/
+.claude/
+.agent/
+poc/
+migration_archive/

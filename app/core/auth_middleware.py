@@ -6,7 +6,7 @@
 
 import logging
 from typing import Optional
-from fastapi import Depends, HTTPException, status, Header
+from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import jwt
 from jwt import PyJWKClient
@@ -17,71 +17,16 @@ logger = logging.getLogger(__name__)
 security = HTTPBearer()
 CONFIG = DefaultConfig()
 
-
-class AuthenticationError(Exception):
-    """認證失敗異常"""
-    pass
+# 模組級快取：避免每次請求都重新建立 PyJWKClient（含 JWKS 下載）
+_jwks_client_cache: dict[str, PyJWKClient] = {}
 
 
-async def verify_bot_framework_signature(
-    authorization: Optional[str] = Header(None)
-) -> dict:
-    """
-    驗證 Bot Framework 請求簽名
-
-    Bot Framework 使用 JWT Bearer Token 驗證請求。
-    Token 包含在 Authorization header 中。
-
-    Args:
-        authorization: Authorization header 值
-
-    Returns:
-        解碼後的 token payload
-
-    Raises:
-        HTTPException: 認證失敗時
-
-    Note:
-        此函數驗證 Bot Framework 發送的請求。
-        生產環境應使用 Bot Framework SDK 的 JwtTokenValidation。
-    """
-    if not authorization:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="未提供認證憑證",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    # 檢查 Bearer 前綴
-    if not authorization.startswith("Bearer "):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="無效的認證格式，需要 Bearer token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    token = authorization[7:]  # 移除 "Bearer " 前綴
-
-    try:
-        # 在生產環境中，應該使用 Bot Framework 的 JwtTokenValidation
-        # 這裡提供簡化版本用於示範
-        #
-        # from botframework.connector.auth import JwtTokenValidation
-        # claims = await JwtTokenValidation.validate_auth_header(authorization)
-
-        # 暫時跳過驗證（僅檢查格式）
-        # TODO: 實作完整的 Bot Framework JWT 驗證
-        logger.warning("Bot Framework 簽名驗證未完全實作，僅檢查格式")
-
-        return {"validated": True, "token": token}
-
-    except Exception as e:
-        logger.error(f"Bot Framework 簽名驗證失敗: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="簽名驗證失敗",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+def _get_jwks_client(tenant_id: str) -> PyJWKClient:
+    """取得或建立快取的 PyJWKClient"""
+    if tenant_id not in _jwks_client_cache:
+        jwks_url = f"https://login.microsoftonline.com/{tenant_id}/discovery/v2.0/keys"
+        _jwks_client_cache[tenant_id] = PyJWKClient(jwks_url)
+    return _jwks_client_cache[tenant_id]
 
 
 async def verify_azure_ad_token(
@@ -101,11 +46,6 @@ async def verify_azure_ad_token(
 
     Raises:
         HTTPException: Token 無效或過期時
-
-    Example:
-        ```
-        curl -H "Authorization: Bearer <token>" https://api.example.com/m365/profile
-        ```
     """
     token = credentials.credentials
 
@@ -117,9 +57,6 @@ async def verify_azure_ad_token(
         )
 
     try:
-        # 驗證 Azure AD JWT Token
-        # 需要從 Azure AD 取得公鑰來驗證簽名
-
         if not CONFIG.APP_TENANTID:
             logger.error("APP_TENANTID 未配置，無法驗證 Azure AD token")
             raise HTTPException(
@@ -127,11 +64,8 @@ async def verify_azure_ad_token(
                 detail="伺服器認證配置錯誤"
             )
 
-        # Azure AD OpenID Connect metadata endpoint
-        jwks_url = f"https://login.microsoftonline.com/{CONFIG.APP_TENANTID}/discovery/v2.0/keys"
-
-        # 取得 JWT 公鑰並驗證
-        jwks_client = PyJWKClient(jwks_url)
+        # 取得快取的 JWKS client
+        jwks_client = _get_jwks_client(CONFIG.APP_TENANTID)
         signing_key = jwks_client.get_signing_key_from_jwt(token)
 
         # 解碼並驗證 token
@@ -139,7 +73,7 @@ async def verify_azure_ad_token(
             token,
             signing_key.key,
             algorithms=["RS256"],
-            audience=CONFIG.APP_ID,  # Token audience 應該是我們的 App ID
+            audience=CONFIG.APP_ID,
             options={
                 "verify_signature": True,
                 "verify_exp": True,
@@ -192,13 +126,6 @@ async def get_current_user(
 
     Returns:
         用戶資訊字典
-
-    Example:
-        ```python
-        @router.get("/protected")
-        async def protected_endpoint(user: dict = Depends(get_current_user)):
-            return {"user_id": user["user_id"], "email": user["email"]}
-        ```
     """
     try:
         user_info = {
@@ -216,6 +143,8 @@ async def get_current_user(
 
         return user_info
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"提取用戶資訊失敗: {e}")
         raise HTTPException(

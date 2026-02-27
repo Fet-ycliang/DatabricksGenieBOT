@@ -7,9 +7,8 @@ from typing import Dict
 from botbuilder.core import TurnContext
 from botbuilder.schema import Activity, ActivityTypes
 
-from botbuilder.schema import Activity, ActivityTypes
-
 from app.models.user_session import UserSession
+from bot.handlers.messages import build_help_message
 
 
 async def handle_special_commands(
@@ -35,16 +34,16 @@ async def handle_special_commands(
             user_sessions[session.user_id] = session
             email_sessions[email] = session
             await turn_context.send_activity(
-                "✅ **Identity Updated!**\n\n"
-                f"**Name:** {session.name}\n"
-                f"**Email:** {session.email}\n\n"
-                "You can now ask me questions about your data!"
+                "✅ **身分已更新！**\n\n"
+                f"**名稱：** {session.name}\n"
+                f"**電子郵件：** {session.email}\n\n"
+                "您現在可以詢問我有關您資料的問題！"
             )
             return True
         await turn_context.send_activity(
-            "❌ **Invalid format**\n\n"
-            "Use: `/setuser your.email@company.com Your Name`\n"
-            "Example: `/setuser john.doe@company.com John Doe`"
+            "❌ **格式錯誤**\n\n"
+            "用法：`/setuser your.email@company.com 您的名稱`\n"
+            "範例：`/setuser john.doe@company.com John Doe`"
         )
         return True
 
@@ -140,28 +139,7 @@ async def handle_special_commands(
         return True
 
     if lowered in ["help", "/help", "commands", "/commands", "information", "about", "what is this"]:
-        await turn_context.send_activity(
-            "🤖 **Databricks Genie 機器人資訊**\n\n"
-            "**我能做什麼：**\n"
-            "我是一個 Teams 聊天機器人，會自動連接到 Databricks Genie Space，讓您可以直接在 Teams 中透過自然語言來查詢，與您的資料互動。\n\n"
-            "**我如何運作：**\n\n"
-            "    • 我使用預先設定的憑證連接到您的 Databricks 工作區\n\n"
-            "    • 您的對話上下文會在工作階段之間保留，以保持連續性\n\n"
-            "    • 我會記住我們的對話歷史，以提供更好的後續回應\n\n"
-            "**工作階段管理：**\n\n"
-            "    • 對話在閒置 **4 小時** 後會自動重置\n\n"
-            "    • 您可以隨時輸入 `reset` 或 `new chat` 手動重置\n"
-            "    • 您的電子郵件 **僅用於在 Genie 中記錄查詢** - 不用於 AI 處理\n\n"
-            "**可用指令：**\n\n"
-            "    • `help` - 顯示此資訊\n\n"
-            "    • `info` - 獲取入門協助\n\n"
-            "    • `whoami` 或 `/me` - 顯示您的使用者資訊和 Graph API 資料\n\n"
-            "    • `reset` - 開始新的對話\n\n"
-            "    • `new chat` - 開始新的對話\n\n"
-            "    • `logout` - 清除您的工作階段\n\n"
-            "**需要協助？**\n"
-            f"請聯絡機器人管理員：{config.ADMIN_CONTACT_EMAIL}"
-        )
+        await turn_context.send_activity(build_help_message(config.ADMIN_CONTACT_EMAIL))
         return True
 
     new_conversation_triggers = [

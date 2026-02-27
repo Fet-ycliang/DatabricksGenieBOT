@@ -227,6 +227,12 @@ MyBot (ActivityHandler) (bot/handlers/bot.py)
 - **docs/deployment/**: Azure 和 Teams 部署完整指南
 - **ENV_CONFIGURATION.md**: 環境變數詳細說明
 
+## 成本與讀取策略
+
+- 嚴禁遞迴讀取 `node_modules`、`.next` 或 `venv` 目錄。
+- 程式碼生成請保持高內聚低耦合，僅輸出有異動的 Code Blocks。
+- 進行 Code Review 時，強制呼叫 `pr-review-toolkit` Agent Skill，禁止讀取全域 Repository。
+
 ## 開發注意事項
 
 - Python 版本需求: 3.11+

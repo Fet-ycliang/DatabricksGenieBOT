@@ -10,54 +10,10 @@ import pytest
 from fastapi import HTTPException
 from unittest.mock import Mock, patch, AsyncMock
 from app.core.auth_middleware import (
-    verify_bot_framework_signature,
     verify_azure_ad_token,
     get_current_user
 )
 
-
-def test_missing_authorization_header():
-    """測試缺少 Authorization header"""
-    print("Testing missing authorization header...")
-
-    # 測試 Bot Framework 簽名驗證
-    try:
-        import asyncio
-        asyncio.run(verify_bot_framework_signature(authorization=None))
-        assert False, "Should raise HTTPException"
-    except HTTPException as e:
-        assert e.status_code == 401
-        assert "未提供認證憑證" in e.detail
-        print("  PASS: Missing authorization header detected")
-
-
-def test_invalid_authorization_format():
-    """測試無效的 Authorization 格式"""
-    print("Testing invalid authorization format...")
-
-    # 不以 "Bearer " 開頭
-    try:
-        import asyncio
-        asyncio.run(verify_bot_framework_signature(authorization="InvalidToken"))
-        assert False, "Should raise HTTPException"
-    except HTTPException as e:
-        assert e.status_code == 401
-        assert "無效的認證格式" in e.detail
-        print("  PASS: Invalid format detected")
-
-
-def test_valid_authorization_format():
-    """測試有效的 Authorization 格式（跳過實際驗證）"""
-    print("Testing valid authorization format...")
-
-    import asyncio
-    result = asyncio.run(
-        verify_bot_framework_signature(authorization="Bearer test_token")
-    )
-
-    assert result is not None
-    assert "validated" in result
-    print("  PASS: Valid format accepted (signature validation skipped)")
 
 
 def test_get_current_user():
@@ -129,9 +85,6 @@ def run_all_tests():
     print()
 
     tests = [
-        test_missing_authorization_header,
-        test_invalid_authorization_format,
-        test_valid_authorization_format,
         test_get_current_user,
         test_get_current_user_missing_oid,
         test_get_current_user_fallback_email,

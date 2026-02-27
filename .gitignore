@@ -215,3 +215,6 @@ poc/
 
 # Claude Code local settings (keep skills/ for version control)
 .claude/settings.local.json
+
+# uv local config (private PyPI mirror, not for cloud deployment)
+uv.toml
