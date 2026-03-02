@@ -1,7 +1,6 @@
 #!/bin/bash
 # Azure App Service startup script with diagnostics
-# Set this as the startup command in Azure Portal:
-#   bash startup.sh
+# Startup Command in Azure Portal: bash startup.sh
 
 echo "=========================================="
 echo "Startup diagnostics..."
@@ -10,6 +9,17 @@ echo "Python: $(python3 --version 2>&1)"
 echo "Working dir: $(pwd)"
 echo "PORT env: ${PORT:-not set}"
 echo "PYTHONPATH: ${PYTHONPATH:-not set}"
+
+# Activate virtual environment if present
+if [ -d "antenv" ]; then
+    echo "Found antenv, activating..."
+    source antenv/bin/activate
+    echo "Python (venv): $(python3 --version 2>&1)"
+    echo "Site-packages: $(python3 -c 'import site; print(site.getsitepackages()[0])' 2>&1)"
+elif [ -d ".venv" ]; then
+    echo "Found .venv, activating..."
+    source .venv/bin/activate
+fi
 
 # Step-by-step import check with unbuffered output (-u) and timeout
 echo "Testing imports (step by step)..."
