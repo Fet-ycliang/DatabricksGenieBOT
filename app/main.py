@@ -18,13 +18,16 @@ CONFIG = DefaultConfig()
 log_level = logging.DEBUG if CONFIG.VERBOSE_LOGGING else logging.INFO
 log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 
+_log_handlers = [logging.StreamHandler()]  # 控制台輸出（永遠啟用）
+try:
+    _log_handlers.append(logging.FileHandler(CONFIG.LOG_FILE, encoding='utf-8'))
+except (OSError, IOError) as exc:
+    print(f"Warning: Cannot create log file '{CONFIG.LOG_FILE}': {exc}. Falling back to console-only logging.", flush=True)
+
 logging.basicConfig(
     level=log_level,
     format=log_format,
-    handlers=[
-        logging.StreamHandler(),  # 控制台輸出
-        logging.FileHandler(CONFIG.LOG_FILE, encoding='utf-8')  # 文件輸出
-    ]
+    handlers=_log_handlers,
 )
 
 logger = logging.getLogger(__name__)

@@ -108,6 +108,9 @@ class MyBot(ActivityHandler):
 
     async def on_invoke_activity(self, turn_context: TurnContext) -> InvokeResponse:
         try:
+            if turn_context.activity.name in ("signin/verifyState", "signin/tokenExchange"):
+                await self._run_dialog(turn_context)
+                return InvokeResponse(status=200)
             if turn_context.activity.name == "adaptiveCard/action":
                 invoke_value = turn_context.activity.value or {}
                 return await self.on_adaptive_card_invoke(turn_context, invoke_value)

@@ -15,6 +15,7 @@ from app.core.config import DefaultConfig
 logger = logging.getLogger(__name__)
 
 security = HTTPBearer()
+_optional_security = HTTPBearer(auto_error=False)
 CONFIG = DefaultConfig()
 
 # 模組級快取：避免每次請求都重新建立 PyJWKClient（含 JWKS 下載）
@@ -155,7 +156,7 @@ async def get_current_user(
 
 # 開發環境：允許繞過認證的可選依賴
 async def optional_auth(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_optional_security)
 ) -> Optional[dict]:
     """
     可選認證依賴（僅用於開發環境）
