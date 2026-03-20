@@ -49,14 +49,6 @@ class DefaultConfig:
     # Timezone configuration for user-facing timestamps
     TIMEZONE = os.getenv("TIMEZONE", "Asia/Taipei")
     
-    # Microsoft Graph API OAuth 設定
-    # 在 Azure Portal 的 Bot Channels Registration 中設定 OAuth Connection
-    OAUTH_CONNECTION_NAME = os.getenv("OAUTH_CONNECTION_NAME", "")
-    
-    # 是否啟用自動從 Graph API 取得使用者資訊
-    # 如果設為 False，則會要求使用者手動輸入 email
-    ENABLE_GRAPH_API_AUTO_LOGIN = os.getenv("ENABLE_GRAPH_API_AUTO_LOGIN", "False").lower() == "true"
-    
     # Feedback settings
     ENABLE_FEEDBACK_CARDS = os.getenv("ENABLE_FEEDBACK_CARDS", "True").lower() == "true"
     ENABLE_GENIE_FEEDBACK_API = os.getenv("ENABLE_GENIE_FEEDBACK_API", "True").lower() == "true"

@@ -1,0 +1,69 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.16/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.16",
+  "version": "1.0.0",
+  "id": "00000000-0000-0000-0000-000000000000",
+  "packageName": "com.fareastone.databricksgeniebot",
+  "developer": {
+    "name": "Fareastone",
+    "websiteUrl": "https://www.fareastone.com.tw",
+    "privacyUrl": "https://www.fareastone.com.tw/privacy",
+    "termsOfUseUrl": "https://www.fareastone.com.tw/terms"
+  },
+  "name": {
+    "short": "Databricks Genie",
+    "full": "Databricks Genie Bot - 資料查詢助手"
+  },
+  "description": {
+    "short": "Databricks 資料查詢 AI 助手",
+    "full": "透過自然語言與 Databricks Genie 互動，快速查詢資料、生成圖表、進行數據分析"
+  },
+  "icons": {
+    "outline": "outline.png",
+    "color": "color.png"
+  },
+  "accentColor": "#FFFFFF",
+  "bots": [
+    {
+      "botId": "00000000-0000-0000-0000-000000000000",
+      "scopes": [
+        "personal",
+        "team",
+        "groupchat"
+      ],
+      "supportsFiles": false,
+      "isNotificationOnly": false,
+      "commandLists": [
+        {
+          "scopes": [
+            "personal",
+            "team",
+            "groupchat"
+          ],
+          "commands": [
+            {
+              "title": "help",
+              "description": "顯示所有可用指令和功能"
+            },
+            {
+              "title": "info",
+              "description": "顯示機器人資訊和使用說明"
+            },
+            {
+              "title": "whoami",
+              "description": "顯示您的使用者資訊和權限"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "permissions": [
+    "identity",
+    "messageTeamMembers"
+  ],
+  "validDomains": [
+    "*.azurewebsites.net",
+    "token.botframework.com"
+  ]
+}
